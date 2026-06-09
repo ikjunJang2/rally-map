@@ -13,16 +13,18 @@ RUN mvn -q package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-RUN addgroup -S app && adduser -S app -G app
+RUN addgroup -S app && adduser -S app -G app \
+    && mkdir -p /app/data && chown -R app:app /app
+
 USER app
 
 COPY --from=build /app/target/*.jar app.jar
 
-# H2 데이터 파일 보존용
+# H2 데이터 파일 보존용 — 명명 볼륨이 이미지의 app 소유권을 이어받는다
 VOLUME /app/data
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD wget -qO- http://localhost:8080/api/pois > /dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:8080/api/pois > /dev/null || exit 1
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
