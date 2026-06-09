@@ -1,0 +1,25 @@
+# 환경/시크릿
+.env
+
+# 백엔드
+backend/target/
+backend/data/
+data/
+
+# 프론트엔드
+frontend/node_modules/
+frontend/dist/
+
+# IDE/OS
+.idea/
+*.iml
+.vscode/
+Thumbs.db
+.DS_Store
+
+# 초기 프로토타입 정적 서버 로그 등
+*.log
+
+# 사용자 로컬
+name/
+.claude/settings.local.json

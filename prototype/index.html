@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="잠실 집회 한 장 지도 — 화장실, 편의시설, 지하철, 응급 연락처를 한 화면에">
+<title>잠실 집회 한 장 지도</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #111111;
+    --accent: #0b57d0;
+    --card: #f3f4f6;
+    --danger: #c5221f;
+    --ok: #137333;
+    --font-base: 18px;
+  }
+  body.dark {
+    --bg: #14141f;
+    --text: #f1f1f1;
+    --card: #232336;
+    --accent: #7baaf7;
+  }
+  body.big { --font-base: 22px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: var(--font-base);
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+  header {
+    position: sticky; top: 0; z-index: 1100;
+    background: var(--bg);
+    border-bottom: 2px solid var(--card);
+    padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  header h1 { font-size: 1.1em; }
+  .toggles button {
+    font-size: 0.85em;
+    padding: 8px 12px;
+    margin-left: 6px;
+    border: 2px solid var(--accent);
+    background: var(--bg);
+    color: var(--accent);
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  #offline-banner {
+    display: none;
+    background: #fde293; color: #5f4b00;
+    text-align: center; padding: 8px; font-weight: 700; font-size: 0.9em;
+  }
+  nav.tabs {
+    position: sticky; top: 58px; z-index: 1100;
+    display: flex;
+    background: var(--bg);
+    border-bottom: 2px solid var(--card);
+  }
+  nav.tabs button {
+    flex: 1;
+    padding: 14px 4px;
+    font-size: 0.95em;
+    font-weight: 700;
+    border: none;
+    background: var(--bg);
+    color: var(--text);
+    border-bottom: 4px solid transparent;
+    cursor: pointer;
+  }
+  nav.tabs button.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  main { padding: 14px; max-width: 720px; margin: 0 auto; }
+  section.tab { display: none; }
+  section.tab.active { display: block; }
+  #map { height: 46vh; min-height: 300px; border-radius: 14px; z-index: 1; }
+  .chiprow { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .chiprow button {
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 2px solid var(--card);
+    background: var(--card);
+    color: var(--text);
+    font-size: 0.9em;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .chiprow button.on { border-color: var(--accent); color: var(--accent); }
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin: 10px 0;
+  }
+  .card h3 { font-size: 1em; margin-bottom: 6px; }
+  .card .meta { font-size: 0.88em; opacity: 0.85; }
+  .card a.navlink {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--accent);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  a.callbtn {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+    margin: 10px 0;
+    text-decoration: none;
+    color: var(--text);
+    border-left: 6px solid var(--accent);
+  }
+  a.callbtn.danger { border-left-color: var(--danger); }
+  a.callbtn .num {
+    font-size: 1.15em; font-weight: 800; color: var(--accent);
+    white-space: nowrap;
+  }
+  a.callbtn.danger .num { color: var(--danger); }
+  .notice {
+    font-size: 0.82em; opacity: 0.75; margin: 14px 0; line-height: 1.5;
+  }
+  ul.tips { padding-left: 22px; }
+  ul.tips li { margin: 8px 0; }
+  .badge {
+    display: inline-block; font-size: 0.75em; font-weight: 800;
+    padding: 2px 8px; border-radius: 6px;
+    background: var(--accent); color: #fff; margin-right: 6px;
+  }
+  footer {
+    text-align: center; font-size: 0.8em; opacity: 0.7;
+    padding: 20px 14px 40px;
+  }
+  .leaflet-popup-content { font-size: 15px; }
+</style>
+</head>
+<body>
+
+<div id="offline-banner">📴 오프라인 상태 — 저장된 정보를 보여드리고 있어요</div>
+
+<header>
+  <h1>🕊️ 잠실 집회 한 장 지도</h1>
+  <div class="toggles">
+    <button id="btn-big" aria-label="글자 크게">가나 크게</button>
+    <button id="btn-dark" aria-label="어두운 화면">🌙</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="active" data-tab="tab-map">🗺️ 지도</button>
+  <button data-tab="tab-call">📞 긴급연락</button>
+  <button data-tab="tab-guide">📋 안내</button>
+</nav>
+
+<main>
+
+<!-- ───────── 지도 탭 ───────── -->
+<section id="tab-map" class="tab active">
+  <div id="map"></div>
+  <div class="chiprow" id="filters"></div>
+  <div id="poi-list"></div>
+  <p class="notice">
+    ⚠️ 시설 위치·운영시간은 현장 사정에 따라 다를 수 있어요.
+    잘못된 정보를 발견하시면 알려주세요. 본 페이지는 위치 추적·로그인·광고가 전혀 없습니다.
+  </p>
+</section>
+
+<!-- ───────── 긴급연락 탭 ───────── -->
+<section id="tab-call" class="tab">
+  <h2 style="margin:6px 0 12px">누르면 바로 전화가 걸려요</h2>
+  <a class="callbtn danger" href="tel:119">
+    <span>🚑 응급의료 · 화재<br><small>위급 상황</small></span>
+    <span class="num">119</span>
+  </a>
+  <a class="callbtn danger" href="tel:112">
+    <span>🚓 경찰 신고</span>
+    <span class="num">112</span>
+  </a>
+  <a class="callbtn" href="tel:120">
+    <span>☎️ 서울시 다산콜<br><small>화장실·교통 등 생활 문의</small></span>
+    <span class="num">120</span>
+  </a>
+  <a class="callbtn" href="tel:0225227284">
+    <span>⚖️ 민주사회를 위한 변호사모임 사무처<br><small>인권침해 법률 상담 연결</small></span>
+    <span class="num">02-522-7284</span>
+  </a>
+  <a class="callbtn" href="tel:1331">
+    <span>🧑‍⚖️ 국가인권위원회 상담</span>
+    <span class="num">1331</span>
+  </a>
+  <div class="card">
+    <h3>📝 미리 적어두면 좋아요</h3>
+    <p class="meta">일행과 헤어졌을 때 만날 장소를 정해두세요. 휴대폰 배터리가 없을 때를 대비해
+    가족 전화번호를 종이에 적어 지니세요.</p>
+  </div>
+</section>
+
+<!-- ───────── 안내 탭 ───────── -->
+<section id="tab-guide" class="tab">
+  <div class="card">
+    <h3><span class="badge">권리</span>평화로운 집회는 헌법이 보장합니다</h3>
+    <p class="meta">헌법 제21조는 집회의 자유를 보장하며, 집회는 허가제가 아닌 신고제입니다.
+    평화적으로 참여하는 시민은 보호받을 권리가 있습니다.</p>
+  </div>
+  <div class="card">
+    <h3><span class="badge">검문</span>불심검문을 받았을 때</h3>
+    <ul class="tips">
+      <li>경찰관에게 소속·성명·검문 이유를 물어볼 수 있어요.</li>
+      <li>임의동행은 거부할 수 있어요. 동행 시 가족·변호사에게 연락할 권리가 있어요.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3><span class="badge">준비물</span>챙겨오면 좋은 것</h3>
+    <ul class="tips">
+      <li>생수, 보조배터리, 양산·모자 (6월 한낮 더위 대비)</li>
+      <li>편한 신발, 우비 (우산보다 안전)</li>
+      <li>신분증, 비상 연락처 메모</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3><span class="badge">안전</span>현장 안전 수칙</h3>
+    <ul class="tips">
+      <li>몸이 안 좋으면 즉시 그늘로 이동하고 주변에 도움을 요청하세요.</li>
+      <li>어린이·어르신과 함께라면 출구와 가까운 가장자리에 계세요.</li>
+      <li>안내 방송과 진행 요원의 안내를 따라주세요.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3><span class="badge">교통</span>오가는 길</h3>
+    <p class="meta">
+      지하철 2호선·9호선 <b>종합운동장역</b>, 2호선 <b>잠실새내역</b> 이용.
+      집회 당일 주변 도로가 통제될 수 있으니 대중교통을 이용하세요.<br>
+      실시간 교통통제: <a href="https://m.topis.seoul.go.kr" style="color:var(--accent)">서울 TOPIS</a>
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  시민이 시민을 위해 만든 페이지 · 추적기 없음 · 오픈소스<br>
+  정보 수정 제안 환영합니다
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ───────── 장소 데이터 (여기만 고치면 됩니다) ─────────
+// type: toilet(화장실) store(편의점) pharm(약국) subway(지하철) water(식수/나눔) meet(집결지)
+const POIS = [
+  { type:"meet",   name:"집결 장소 (핸드볼경기장 앞)", lat:37.5163, lng:127.0772, memo:"주최 측 공지에 따라 변경될 수 있음" },
+  { type:"subway", name:"종합운동장역 (2·9호선)", lat:37.5110, lng:127.0735, memo:"6·7번 출구가 경기장 방면" },
+  { type:"subway", name:"잠실새내역 (2호선)", lat:37.5117, lng:127.0863, memo:"도보 약 10분" },
+  { type:"toilet", name:"종합운동장 공중화장실", lat:37.5152, lng:127.0730, memo:"운동장 외곽 다수" },
+  { type:"toilet", name:"종합운동장역 내 화장실", lat:37.5110, lng:127.0738, memo:"개찰구 밖 이용 가능" },
+  { type:"store",  name:"편의점 (종합운동장역 주변)", lat:37.5121, lng:127.0741, memo:"생수·간식" },
+  { type:"pharm",  name:"약국 (잠실새내역 방면)", lat:37.5126, lng:127.0851, memo:"운영시간 확인 필요" },
+  { type:"water",  name:"물·물품 나눔처", lat:37.5158, lng:127.0760, memo:"현장 공지로 위치 갱신" },
+];
+
+const TYPE_INFO = {
+  meet:   { label:"📍 집결지",  color:"#c5221f" },
+  subway: { label:"🚇 지하철", color:"#0b57d0" },
+  toilet: { label:"🚻 화장실", color:"#137333" },
+  store:  { label:"🏪 편의점", color:"#9334a4" },
+  pharm:  { label:"💊 약국",   color:"#b06000" },
+  water:  { label:"💧 나눔",   color:"#0b8043" },
+};
+
+// ───────── 지도 ─────────
+const map = L.map('map').setView([37.5145, 127.0765], 15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+const markers = [];
+POIS.forEach(p => {
+  const info = TYPE_INFO[p.type];
+  const m = L.circleMarker([p.lat, p.lng], {
+    radius: 11, color: info.color, fillColor: info.color, fillOpacity: 0.85, weight: 2
+  }).addTo(map);
+  m.bindPopup(`<b>${info.label} ${p.name}</b><br>${p.memo}`);
+  m.poiType = p.type;
+  markers.push(m);
+});
+
+// ───────── 필터 칩 ─────────
+const filters = document.getElementById('filters');
+const active = new Set(Object.keys(TYPE_INFO));
+Object.entries(TYPE_INFO).forEach(([key, info]) => {
+  const b = document.createElement('button');
+  b.textContent = info.label;
+  b.className = 'on';
+  b.onclick = () => {
+    if (active.has(key)) { active.delete(key); b.classList.remove('on'); }
+    else { active.add(key); b.classList.add('on'); }
+    markers.forEach(m => {
+      if (active.has(m.poiType)) m.addTo(map); else map.removeLayer(m);
+    });
+    renderList();
+  };
+  filters.appendChild(b);
+});
+
+// ───────── 목록 (지도가 안 떠도 보이게) ─────────
+function renderList() {
+  const el = document.getElementById('poi-list');
+  el.innerHTML = '';
+  POIS.filter(p => active.has(p.type)).forEach(p => {
+    const info = TYPE_INFO[p.type];
+    const d = document.createElement('div');
+    d.className = 'card';
+    d.innerHTML = `<h3>${info.label} ${p.name}</h3>
+      <p class="meta">${p.memo}</p>
+      <a class="navlink" href="https://map.kakao.com/link/map/${encodeURIComponent(p.name)},${p.lat},${p.lng}">카카오맵에서 길찾기 →</a>`;
+    el.appendChild(d);
+  });
+}
+renderList();
+
+// ───────── 탭 ─────────
+document.querySelectorAll('nav.tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('section.tab').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'tab-map') setTimeout(() => map.invalidateSize(), 50);
+  };
+});
+
+// ───────── 접근성 토글 ─────────
+document.getElementById('btn-big').onclick = () => document.body.classList.toggle('big');
+document.getElementById('btn-dark').onclick = () => document.body.classList.toggle('dark');
+
+// ───────── 오프라인 표시 + 서비스워커 ─────────
+function updateOnline() {
+  document.getElementById('offline-banner').style.display = navigator.onLine ? 'none' : 'block';
+}
+window.addEventListener('online', updateOnline);
+window.addEventListener('offline', updateOnline);
+updateOnline();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>

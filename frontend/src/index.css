@@ -1,0 +1,148 @@
+:root {
+  --bg: #ffffff;
+  --text: #111111;
+  --accent: #0b57d0;
+  --card: #f3f4f6;
+  --danger: #c5221f;
+  --font-base: 18px;
+}
+body.dark {
+  --bg: #14141f;
+  --text: #f1f1f1;
+  --card: #232336;
+  --accent: #7baaf7;
+}
+body.big { --font-base: 22px; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--font-base);
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app-header {
+  position: sticky; top: 0; z-index: 1100;
+  background: var(--bg);
+  border-bottom: 2px solid var(--card);
+  padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.app-header h1 { font-size: 1.05em; }
+.app-header .venue {
+  font-size: 0.7em; font-weight: 700; color: var(--accent);
+  border: 2px solid var(--accent); border-radius: 8px; padding: 1px 7px;
+  vertical-align: middle;
+}
+.toggles button {
+  font-size: 0.85em;
+  padding: 8px 12px;
+  margin-left: 6px;
+  border: 2px solid var(--accent);
+  background: var(--bg);
+  color: var(--accent);
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.banner {
+  text-align: center; padding: 8px; font-weight: 700; font-size: 0.9em;
+}
+.banner.warn { background: #fde293; color: #5f4b00; }
+.banner.info { background: #e8f0fe; color: #174ea6; }
+
+nav.tabs {
+  position: sticky; top: 58px; z-index: 1100;
+  display: flex;
+  background: var(--bg);
+  border-bottom: 2px solid var(--card);
+}
+nav.tabs button {
+  flex: 1;
+  padding: 14px 4px;
+  font-size: 0.95em;
+  font-weight: 700;
+  border: none;
+  background: var(--bg);
+  color: var(--text);
+  border-bottom: 4px solid transparent;
+  cursor: pointer;
+}
+nav.tabs button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+main { padding: 14px; max-width: 720px; margin: 0 auto; }
+.tab-title { margin: 6px 0 12px; }
+
+.map { height: 46vh; min-height: 300px; border-radius: 14px; z-index: 1; }
+
+.chiprow { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.chiprow button {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--card);
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.9em;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chiprow button.on { border-color: var(--accent); color: var(--accent); }
+
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 10px 0;
+}
+.card h3 { font-size: 1em; margin-bottom: 6px; }
+.card .meta { font-size: 0.88em; opacity: 0.85; }
+.card a, .card .navlink {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+.card .navlink { display: inline-block; margin-top: 8px; }
+.card.pinned { border: 2px solid var(--accent); }
+
+.callbtn {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 10px 0;
+  text-decoration: none;
+  color: var(--text);
+  border-left: 6px solid var(--accent);
+}
+.callbtn.danger { border-left-color: var(--danger); }
+.callbtn .num {
+  font-size: 1.15em; font-weight: 800; color: var(--accent);
+  white-space: nowrap;
+}
+.callbtn.danger .num { color: var(--danger); }
+
+.notice { font-size: 0.82em; opacity: 0.75; margin: 14px 0; line-height: 1.5; }
+
+ul.tips { padding-left: 22px; }
+ul.tips li { margin: 8px 0; }
+
+.badge {
+  display: inline-block; font-size: 0.75em; font-weight: 800;
+  padding: 2px 8px; border-radius: 6px;
+  background: var(--accent); color: #fff; margin-right: 6px;
+}
+
+footer {
+  text-align: center; font-size: 0.8em; opacity: 0.7;
+  padding: 20px 14px 40px;
+}
+
+.leaflet-popup-content { font-size: 15px; }

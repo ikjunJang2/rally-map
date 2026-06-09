@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: ./backend
+    container_name: rally-backend
+    environment:
+      # 운영에서는 .env 파일이나 시크릿으로 주입할 것
+      RALLY_ADMIN_KEY: ${RALLY_ADMIN_KEY:?RALLY_ADMIN_KEY를 .env에 설정하세요}
+    volumes:
+      - rally-data:/app/data
+    restart: unless-stopped
+    networks: [rally]
+
+  frontend:
+    build: ./frontend
+    container_name: rally-frontend
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks: [rally]
+
+volumes:
+  rally-data:
+
+networks:
+  rally:
