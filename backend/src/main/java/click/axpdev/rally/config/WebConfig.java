@@ -12,6 +12,6 @@ public class WebConfig implements WebMvcConfigurer {
         // 개발용 Vite dev 서버 허용. 운영 배포 시 실제 도메인으로 교체할 것.
         registry.addMapping("/api/**")
                 .allowedOrigins("http://localhost:5173")
-                .allowedMethods("GET", "POST", "DELETE");
+                .allowedMethods("GET", "POST", "PATCH", "DELETE");
     }
 }

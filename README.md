@@ -50,6 +50,10 @@ docker compose up -d --build
 | GET | `/api/notices` | 공지 목록 (고정 공지 우선) |
 | POST | `/api/notices` | 공지 등록 — `X-Admin-Key` 헤더 필요 |
 | DELETE | `/api/notices/{id}` | 공지 삭제 — `X-Admin-Key` 헤더 필요 |
+| GET | `/api/streams` | 현장 라이브 영상 목록 (LIVE 우선) |
+| POST | `/api/streams` | 라이브 등록 — `X-Admin-Key`, https URL만 |
+| PATCH | `/api/streams/{id}/ended` | 방송 종료 표시 — `X-Admin-Key` |
+| DELETE | `/api/streams/{id}` | 라이브 삭제 — `X-Admin-Key` |
 
 공지 등록 예시:
 

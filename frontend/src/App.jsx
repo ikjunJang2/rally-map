@@ -3,13 +3,15 @@ import Header from './components/Header';
 import StatusBanner from './components/StatusBanner';
 import NoticeBoard from './components/NoticeBoard';
 import MapTab from './components/MapTab';
+import LiveTab from './components/LiveTab';
 import EmergencyTab from './components/EmergencyTab';
 import GuideTab from './components/GuideTab';
 import { usePois, useNotices } from './hooks/usePois';
 
 const TABS = [
   { id: 'map', label: '🗺️ 지도' },
-  { id: 'call', label: '📞 긴급연락' },
+  { id: 'live', label: '📺 현장' },
+  { id: 'call', label: '📞 긴급' },
   { id: 'guide', label: '📋 안내' },
 ];
 
@@ -39,6 +41,7 @@ export default function App() {
       <main>
         <NoticeBoard notices={notices} />
         {tab === 'map' && <MapTab pois={pois} />}
+        {tab === 'live' && <LiveTab />}
         {tab === 'call' && <EmergencyTab />}
         {tab === 'guide' && <GuideTab />}
       </main>

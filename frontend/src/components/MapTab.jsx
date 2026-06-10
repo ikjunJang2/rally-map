@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, LayersControl, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
@@ -19,20 +19,22 @@ function FilterChips({ active, onToggle }) {
   );
 }
 
-function PoiCard({ poi }) {
+function PoiCard({ poi, onFocus }) {
   const info = TYPE_INFO[poi.type] ?? { label: poi.type };
-  const kakao = `https://map.kakao.com/link/map/${encodeURIComponent(poi.name)},${poi.lat},${poi.lng}`;
   return (
-    <div className="card">
+    <button className="card poi-card" onClick={() => onFocus(poi)}>
       <h3>{info.label} {poi.name}</h3>
       <p className="meta">{poi.memo}</p>
-      <a className="navlink" href={kakao} target="_blank" rel="noreferrer">카카오맵에서 길찾기 →</a>
-    </div>
+      <span className="navlink">지도에서 보기 ↑</span>
+    </button>
   );
 }
 
 export default function MapTab({ pois }) {
   const [active, setActive] = useState(() => new Set(Object.keys(TYPE_INFO)));
+  const mapRef = useRef(null);
+  const mapBoxRef = useRef(null);
+  const markerRefs = useRef({});
 
   const toggle = (key) => {
     setActive((prev) => {
@@ -47,52 +49,64 @@ export default function MapTab({ pois }) {
     [pois, active]
   );
 
+  /** 카드 클릭 → 지도 위치로 부드럽게 이동 + 팝업 열기 */
+  const focusPoi = (poi) => {
+    mapBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const map = mapRef.current;
+    if (!map) return;
+    map.flyTo([poi.lat, poi.lng], 18, { duration: 0.8 });
+    setTimeout(() => markerRefs.current[poi.id]?.openPopup(), 900);
+  };
+
   return (
     <section>
-      <MapContainer center={CENTER} zoom={17} className="map" scrollWheelZoom>
-        <LayersControl position="topright">
-          <LayersControl.BaseLayer checked name="🛰️ 위성 (실사)">
-            <TileLayer
-              attribution='&copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              maxZoom={19}
-            />
-          </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="🗺️ 일반 지도">
-            <TileLayer
-              attribution='&copy; OpenStreetMap &copy; CARTO'
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-              maxZoom={19}
-            />
-          </LayersControl.BaseLayer>
-          {/* 위성사진 위에 도로명·장소명 라벨 오버레이 */}
-          <LayersControl.Overlay checked name="장소 이름 표시">
-            <TileLayer
-              attribution='&copy; CARTO'
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
-              maxZoom={19}
-            />
-          </LayersControl.Overlay>
-        </LayersControl>
-        {visible.map((p) => {
-          const info = TYPE_INFO[p.type] ?? { color: '#666', label: p.type };
-          return (
-            <CircleMarker
-              key={p.id}
-              center={[p.lat, p.lng]}
-              radius={11}
-              pathOptions={{ color: info.color, fillColor: info.color, fillOpacity: 0.85, weight: 2 }}
-            >
-              <Popup><b>{info.label} {p.name}</b><br />{p.memo}</Popup>
-            </CircleMarker>
-          );
-        })}
-      </MapContainer>
+      <div ref={mapBoxRef} style={{ scrollMarginTop: '110px' }}>
+        <MapContainer ref={mapRef} center={CENTER} zoom={17} className="map" scrollWheelZoom>
+          <LayersControl position="topright">
+            <LayersControl.BaseLayer checked name="🛰️ 위성 (실사)">
+              <TileLayer
+                attribution='&copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="🗺️ 일반 지도">
+              <TileLayer
+                attribution='&copy; OpenStreetMap &copy; CARTO'
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            {/* 위성사진 위에 도로명·장소명 라벨 오버레이 */}
+            <LayersControl.Overlay checked name="장소 이름 표시">
+              <TileLayer
+                attribution='&copy; CARTO'
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
+                maxZoom={19}
+              />
+            </LayersControl.Overlay>
+          </LayersControl>
+          {visible.map((p) => {
+            const info = TYPE_INFO[p.type] ?? { color: '#666', label: p.type };
+            return (
+              <CircleMarker
+                key={p.id}
+                ref={(m) => { markerRefs.current[p.id] = m; }}
+                center={[p.lat, p.lng]}
+                radius={11}
+                pathOptions={{ color: info.color, fillColor: info.color, fillOpacity: 0.85, weight: 2 }}
+              >
+                <Popup><b>{info.label} {p.name}</b><br />{p.memo}</Popup>
+              </CircleMarker>
+            );
+          })}
+        </MapContainer>
+      </div>
 
       <FilterChips active={active} onToggle={toggle} />
 
       <div>
-        {visible.map((p) => <PoiCard key={p.id} poi={p} />)}
+        {visible.map((p) => <PoiCard key={p.id} poi={p} onFocus={focusPoi} />)}
       </div>
 
       <p className="notice">

@@ -112,6 +112,26 @@ main { padding: 14px; max-width: 720px; margin: 0 auto; }
 .card .navlink { display: inline-block; margin-top: 8px; }
 .card.pinned { border: 2px solid var(--accent); }
 
+/* 클릭 가능한 POI 카드 — 버튼이지만 카드처럼 보이게 */
+button.poi-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 2px solid transparent;
+  font: inherit;
+  cursor: pointer;
+  color: var(--text);
+}
+button.poi-card:active { border-color: var(--accent); }
+
+/* 라이브 카드 */
+a.streamcard { display: block; }
+.live-dot { color: #e53935; font-weight: 800; }
+.ended {
+  font-size: 0.75em; font-weight: 800; padding: 2px 8px;
+  border-radius: 6px; background: #9e9e9e; color: #fff;
+}
+
 .callbtn {
   display: flex; align-items: center; justify-content: space-between;
   background: var(--card);

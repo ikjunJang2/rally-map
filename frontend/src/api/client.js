@@ -26,3 +26,12 @@ export async function fetchNotices() {
     return [];
   }
 }
+
+/** 현장 라이브 영상 목록. 실패 시 빈 배열. */
+export async function fetchStreams() {
+  try {
+    return await get('/streams');
+  } catch {
+    return [];
+  }
+}
