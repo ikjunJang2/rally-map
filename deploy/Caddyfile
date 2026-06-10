@@ -1,10 +1,10 @@
-# www.63freedom.co.kr — HTTPS 자동 발급(Let's Encrypt) + 프론트 리버스프록시
-www.63freedom.co.kr {
+# www.63freedom.com — HTTPS 자동 발급(Let's Encrypt) + 프론트 리버스프록시
+www.63freedom.com {
 	encode gzip
 	reverse_proxy frontend:80
 }
 
-# 주소창에 63freedom.co.kr만 쳐도 www로 연결
-63freedom.co.kr {
-	redir https://www.63freedom.co.kr{uri} permanent
+# 주소창에 63freedom.com만 쳐도 www로 연결
+63freedom.com {
+	redir https://www.63freedom.com{uri} permanent
 }
