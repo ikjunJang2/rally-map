@@ -114,7 +114,13 @@ public class AdminSettingController {
             JsonNode root = http.get()
                     .uri("https://www.law.go.kr/DRF/lawSearch.do?OC={oc}&target=law&type=JSON&display=1&query={q}", oc, "헌법")
                     .retrieve().body(JsonNode.class);
-            JsonNode laws = root == null ? null : root.path("LawSearch").path("law");
+            if (root == null) return new Res(false, "법령정보센터에서 빈 응답을 받았어요");
+            // law.go.kr은 OC/서버IP 미등록 시 {"result":..,"msg":".. IP주소 및 도메인주소를 등록 .."} 로 응답
+            if (root.has("result") || root.has("msg")) {
+                String msg = root.path("msg").asText(root.path("result").asText("사용자 검증 실패"));
+                return new Res(false, "law.go.kr 검증 실패 — " + msg);
+            }
+            JsonNode laws = root.path("LawSearch").path("law");
             boolean has = laws != null && !laws.isMissingNode()
                     && (laws.isArray() ? laws.size() > 0 : laws.isObject());
             return has ? new Res(true, "정상 — '헌법' 검색 결과를 받았어요")
