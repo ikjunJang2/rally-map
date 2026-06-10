@@ -26,7 +26,10 @@ export interface Stream {
   url: string;
   channel: string | null;
   videoId: string | null;
+  channelId: string | null;
   thumbnail: string | null;
+  channelThumbnail: string | null;
+  viewers: number | null;
   source: 'MANUAL' | 'YOUTUBE';
   live: boolean;
   createdAt: string;

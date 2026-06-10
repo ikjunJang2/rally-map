@@ -101,13 +101,45 @@ public class YouTubeService {
                     String channel = sn.path("channelTitle").asText(null);
                     if (isExcluded(channel)) continue;
                     String thumb = sn.path("thumbnails").path("medium").path("url").asText(null);
+                    String channelId = sn.path("channelId").asText(null);
                     streams.findByVideoId(videoId).ifPresentOrElse(
                             s -> s.refreshFromYouTube(title, channel, thumb),
-                            () -> streams.save(Stream.fromYouTube(videoId, title, channel, thumb)));
+                            () -> streams.save(Stream.fromYouTube(videoId, title, channel, thumb, channelId)));
                 }
             } catch (Exception e) {
                 log.warn("유튜브 검색 실패 (q='{}'): {}", q, e.getMessage());
             }
+        }
+        fetchMissingChannelAvatars();
+    }
+
+    /** 아바타가 없는 채널들을 일괄 조회 (channels.list, 1유닛/호출·최대 50개) */
+    private void fetchMissingChannelAvatars() {
+        List<Stream> missing = streams.findBySource(Stream.Source.YOUTUBE).stream()
+                .filter(s -> s.getChannelThumbnail() == null && s.getChannelId() != null)
+                .toList();
+        if (missing.isEmpty()) return;
+
+        String ids = missing.stream().map(Stream::getChannelId).distinct()
+                .limit(50).collect(Collectors.joining(","));
+        try {
+            JsonNode root = http.get()
+                    .uri(API + "/channels?part=snippet&id={ids}&key={key}", ids, apiKey)
+                    .retrieve()
+                    .body(JsonNode.class);
+            if (root == null) return;
+
+            Map<String, String> avatars = new HashMap<>();
+            for (JsonNode item : root.path("items")) {
+                avatars.put(item.path("id").asText(),
+                        item.path("snippet").path("thumbnails").path("default").path("url").asText(null));
+            }
+            for (Stream s : missing) {
+                String avatar = avatars.get(s.getChannelId());
+                if (avatar != null) s.setChannelThumbnail(avatar);
+            }
+        } catch (Exception e) {
+            log.warn("채널 아바타 조회 실패: {}", e.getMessage());
         }
     }
 
@@ -121,22 +153,30 @@ public class YouTubeService {
 
         String ids = liveOnes.stream().map(Stream::getVideoId).collect(Collectors.joining(","));
         try {
+            // liveStreamingDetails 파트 추가로 동시 시청자수까지 — 호출 비용 동일(1유닛)
             JsonNode root = http.get()
-                    .uri(API + "/videos?part=snippet&id={ids}&key={key}", ids, apiKey)
+                    .uri(API + "/videos?part=snippet,liveStreamingDetails&id={ids}&key={key}", ids, apiKey)
                     .retrieve()
                     .body(JsonNode.class);
             if (root == null) return;
 
             Set<String> stillLive = new HashSet<>();
+            Map<String, Long> viewersById = new HashMap<>();
             for (JsonNode item : root.path("items")) {
+                String id = item.path("id").asText();
                 if ("live".equals(item.path("snippet").path("liveBroadcastContent").asText())) {
-                    stillLive.add(item.path("id").asText());
+                    stillLive.add(id);
+                    long v = item.path("liveStreamingDetails").path("concurrentViewers").asLong(-1);
+                    if (v >= 0) viewersById.put(id, v);
                 }
             }
             for (Stream s : liveOnes) {
                 if (!stillLive.contains(s.getVideoId())) {
                     s.setLive(false);
+                    s.setViewers(null);
                     log.info("라이브 종료 표시: {}", s.getTitle());
+                } else {
+                    s.setViewers(viewersById.get(s.getVideoId()));
                 }
             }
         } catch (Exception e) {

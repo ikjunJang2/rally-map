@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tv, Radio, Play, Cctv, ExternalLink, SearchIcon, MapPin, RefreshCw } from 'lucide-react';
+import { Tv, Radio, Play, Cctv, ExternalLink, SearchIcon, MapPin, RefreshCw, Eye } from 'lucide-react';
 import { useStreams, useCctvs } from '../hooks/useApi';
 import CctvPlayer from '../components/CctvPlayer';
 import type { Stream } from '../types';
@@ -20,6 +20,13 @@ const CCTV_LINKS = [
   { label: '국가교통정보센터 CCTV 지도', url: 'https://www.its.go.kr/map/cctv' },
 ];
 
+/** 12345 → "1.2만", 987 → "987" */
+function formatViewers(n: number): string {
+  if (n >= 10_000) return `${(n / 10_000).toFixed(1)}만`;
+  if (n >= 1_000) return n.toLocaleString('ko-KR');
+  return String(n);
+}
+
 function StreamCard({ s }: { s: Stream }) {
   return (
     <a className="card streamcard yt" href={s.url} target="_blank" rel="noreferrer">
@@ -33,7 +40,19 @@ function StreamCard({ s }: { s: Stream }) {
             : <span className="ended">종료</span>}
           {s.title}
         </h3>
-        {s.channel && <p className="meta">{s.channel}</p>}
+        {s.channel && (
+          <p className="yt-channel">
+            {s.channelThumbnail && (
+              <img className="ch-avatar" src={s.channelThumbnail} alt="" loading="lazy" />
+            )}
+            <span className="ch-name">{s.channel}</span>
+            {s.live && s.viewers != null && (
+              <span className="viewers">
+                <Eye size={13} aria-hidden="true" /> {formatViewers(s.viewers)}명 시청
+              </span>
+            )}
+          </p>
+        )}
         <span className="navlink"><Play size={15} aria-hidden="true" /> 유튜브에서 보기</span>
       </div>
     </a>

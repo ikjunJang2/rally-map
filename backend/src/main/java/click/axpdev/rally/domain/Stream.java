@@ -29,9 +29,19 @@ public class Stream {
     @Column(unique = true)
     private String videoId;
 
+    /** 유튜브 채널 ID — 아바타 조회용 */
+    private String channelId;
+
     /** 썸네일 이미지 URL */
     @Column(length = 500)
     private String thumbnail;
+
+    /** 채널 아바타 이미지 URL */
+    @Column(length = 500)
+    private String channelThumbnail;
+
+    /** 실시간 동시 시청자수 — 1분마다 갱신, 미제공 시 null */
+    private Long viewers;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -54,10 +64,12 @@ public class Stream {
     }
 
     /** 유튜브 자동 수집용 */
-    public static Stream fromYouTube(String videoId, String title, String channel, String thumbnail) {
+    public static Stream fromYouTube(String videoId, String title, String channel,
+                                     String thumbnail, String channelId) {
         Stream s = new Stream(title, "https://www.youtube.com/watch?v=" + videoId, channel, true);
         s.videoId = videoId;
         s.thumbnail = thumbnail;
+        s.channelId = channelId;
         s.source = Source.YOUTUBE;
         return s;
     }
@@ -67,12 +79,17 @@ public class Stream {
     public String getUrl() { return url; }
     public String getChannel() { return channel; }
     public String getVideoId() { return videoId; }
+    public String getChannelId() { return channelId; }
     public String getThumbnail() { return thumbnail; }
+    public String getChannelThumbnail() { return channelThumbnail; }
+    public Long getViewers() { return viewers; }
     public Source getSource() { return source; }
     public boolean isLive() { return live; }
     public Instant getCreatedAt() { return createdAt; }
 
     public void setLive(boolean live) { this.live = live; }
+    public void setChannelThumbnail(String channelThumbnail) { this.channelThumbnail = channelThumbnail; }
+    public void setViewers(Long viewers) { this.viewers = viewers; }
 
     /** 자동 수집 갱신 — 제목·채널·썸네일 최신화 후 라이브 표시 */
     public void refreshFromYouTube(String title, String channel, String thumbnail) {
