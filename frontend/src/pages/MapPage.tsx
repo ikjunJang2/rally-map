@@ -7,22 +7,22 @@ import { usePois } from '../hooks/useApi';
 import Skeleton from '../components/Skeleton';
 import type { Poi, PoiType } from '../types';
 
-function FilterChips({ active, onToggle }: {
+function FilterChecks({ active, onToggle }: {
   active: Set<PoiType>;
   onToggle: (key: PoiType) => void;
 }) {
   return (
-    <div className="chiprow" role="group" aria-label="시설 종류 필터">
+    <div className="filter-checks" role="group" aria-label="시설 종류 필터">
       {(Object.entries(TYPE_INFO) as [PoiType, (typeof TYPE_INFO)[PoiType]][]).map(([key, info]) => (
-        <button
-          key={key}
-          className={active.has(key) ? 'on' : ''}
-          aria-pressed={active.has(key)}
-          onClick={() => onToggle(key)}
-        >
-          <info.Icon size={16} aria-hidden="true" />
+        <label key={key} className="check">
+          <input
+            type="checkbox"
+            checked={active.has(key)}
+            onChange={() => onToggle(key)}
+          />
+          <info.Icon size={15} aria-hidden="true" style={{ color: info.color }} />
           {info.label}
-        </button>
+        </label>
       ))}
     </div>
   );
@@ -129,7 +129,7 @@ export default function MapPage() {
         </MapContainer>
       </div>
 
-      <FilterChips active={active} onToggle={toggle} />
+      <FilterChecks active={active} onToggle={toggle} />
 
       {isLoading
         ? <Skeleton lines={3} />

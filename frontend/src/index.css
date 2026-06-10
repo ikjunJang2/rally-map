@@ -225,6 +225,24 @@ main { padding: 16px 14px; }
 
 .map { height: 44vh; min-height: 280px; border-radius: 16px; z-index: 1; border: 1px solid var(--border); }
 
+/* ── 지도 시설 필터 (체크박스) ── */
+.filter-checks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px 12px;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.filter-checks label.check {
+  min-height: 42px; /* 터치 타깃 */
+  font-size: 0.88em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 /* ── 필터 칩 ── */
 .chiprow { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
 .chiprow button {
