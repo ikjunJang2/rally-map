@@ -2,36 +2,36 @@ import { FALLBACK_POIS } from '../data/fallbackPois';
 
 const BASE = '/api';
 
-async function get(path) {
-  const res = await fetch(`${BASE}${path}`, { headers: { Accept: 'application/json' } });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return res.json();
+/** 공통 fetch 래퍼. 4xx/5xx는 서버 메시지를 담아 throw. */
+export async function api(path, { method = 'GET', body, token } = {}) {
+  const headers = { Accept: 'application/json' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  if (!res.ok) {
+    let message = `요청 실패 (${res.status})`;
+    try {
+      const data = await res.json();
+      message = data.error ?? data.message ?? message;
+    } catch { /* 본문 없는 에러 응답 */ }
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
+  }
+  return res.status === 204 ? null : res.json();
 }
 
-/** POI 목록. 서버 장애 시 내장 데이터로 폴백 — 현장에서 절대 빈 화면을 보여주지 않는다. */
+/** POI 목록 — 서버 장애 시 내장 데이터 폴백 (현장에서 빈 화면 금지) */
 export async function fetchPois() {
   try {
-    const pois = await get('/pois');
-    return { pois, source: 'server' };
+    return { pois: await api('/pois'), source: 'server' };
   } catch {
     return { pois: FALLBACK_POIS, source: 'fallback' };
-  }
-}
-
-/** 공지 목록. 실패 시 빈 배열. */
-export async function fetchNotices() {
-  try {
-    return await get('/notices');
-  } catch {
-    return [];
-  }
-}
-
-/** 현장 라이브 영상 목록. 실패 시 빈 배열. */
-export async function fetchStreams() {
-  try {
-    return await get('/streams');
-  } catch {
-    return [];
   }
 }

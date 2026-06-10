@@ -4,7 +4,8 @@
   --accent: #0b57d0;
   --card: #f3f4f6;
   --danger: #c5221f;
-  --font-base: 18px;
+  --font-base: 17px;
+  --nav-h: 64px;
 }
 body.dark {
   --bg: #14141f;
@@ -12,17 +13,29 @@ body.dark {
   --card: #232336;
   --accent: #7baaf7;
 }
-body.big { --font-base: 22px; }
+body.big { --font-base: 21px; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── 모바일 전용 앱 프레임: 데스크톱에서도 480px 폰 화면처럼 ── */
 body {
   font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  background: var(--bg);
+  background: #d9dbe3;
   color: var(--text);
   font-size: var(--font-base);
   line-height: 1.55;
   -webkit-text-size-adjust: 100%;
+}
+body.dark { background: #0a0a12; }
+
+.app-frame {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: var(--bg);
+  box-shadow: 0 0 24px rgba(0,0,0,0.18);
+  padding-bottom: calc(var(--nav-h) + 16px);
+  position: relative;
 }
 
 .app-header {
@@ -32,65 +45,80 @@ body {
   padding: 10px 14px;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
-.app-header h1 { font-size: 1.05em; }
+.app-header h1 { font-size: 1em; }
 .app-header .venue {
   font-size: 0.7em; font-weight: 700; color: var(--accent);
   border: 2px solid var(--accent); border-radius: 8px; padding: 1px 7px;
   vertical-align: middle;
+  white-space: nowrap;
 }
-.toggles button {
-  font-size: 0.85em;
-  padding: 8px 12px;
-  margin-left: 6px;
+.toggles { display: flex; align-items: center; gap: 6px; }
+.toggles button, .toggles .admin-link {
+  font-size: 0.82em;
+  padding: 7px 10px;
   border: 2px solid var(--accent);
   background: var(--bg);
   color: var(--accent);
   border-radius: 10px;
   cursor: pointer;
   font-weight: 700;
+  text-decoration: none;
+  line-height: 1;
 }
+.toggles .admin-link { border-color: var(--card); }
+.toggles .admin-link.on { border-color: var(--accent); background: var(--accent); }
 
-.banner {
-  text-align: center; padding: 8px; font-weight: 700; font-size: 0.9em;
-}
+.banner { text-align: center; padding: 8px; font-weight: 700; font-size: 0.88em; }
 .banner.warn { background: #fde293; color: #5f4b00; }
 .banner.info { background: #e8f0fe; color: #174ea6; }
 
-nav.tabs {
-  position: sticky; top: 58px; z-index: 1100;
+/* ── 하단 탭바 (앱 스타일) ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: var(--nav-h);
   display: flex;
   background: var(--bg);
-  border-bottom: 2px solid var(--card);
+  border-top: 2px solid var(--card);
+  z-index: 1200;
+  padding-bottom: env(safe-area-inset-bottom);
 }
-nav.tabs button {
+.bottom-nav a {
   flex: 1;
-  padding: 14px 4px;
-  font-size: 0.95em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.72em;
   font-weight: 700;
-  border: none;
-  background: var(--bg);
   color: var(--text);
-  border-bottom: 4px solid transparent;
-  cursor: pointer;
+  opacity: 0.55;
+  text-decoration: none;
 }
-nav.tabs button.active {
+.bottom-nav a .icon { font-size: 1.7em; }
+.bottom-nav a.active {
+  opacity: 1;
   color: var(--accent);
-  border-bottom-color: var(--accent);
 }
 
-main { padding: 14px; max-width: 720px; margin: 0 auto; }
-.tab-title { margin: 6px 0 12px; }
+main { padding: 14px; }
+.tab-title { margin: 6px 0 12px; font-size: 1.15em; }
 
-.map { height: 46vh; min-height: 300px; border-radius: 14px; z-index: 1; }
+.map { height: 44vh; min-height: 280px; border-radius: 14px; z-index: 1; }
 
 .chiprow { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .chiprow button {
-  padding: 10px 14px;
+  padding: 9px 13px;
   border-radius: 999px;
   border: 2px solid var(--card);
   background: var(--card);
   color: var(--text);
-  font-size: 0.9em;
+  font-size: 0.88em;
   font-weight: 700;
   cursor: pointer;
 }
@@ -103,16 +131,12 @@ main { padding: 14px; max-width: 720px; margin: 0 auto; }
   margin: 10px 0;
 }
 .card h3 { font-size: 1em; margin-bottom: 6px; }
-.card .meta { font-size: 0.88em; opacity: 0.85; }
-.card a, .card .navlink {
-  color: var(--accent);
-  font-weight: 700;
-  text-decoration: none;
-}
+.card .meta { font-size: 0.87em; opacity: 0.85; overflow-wrap: anywhere; }
+.card a, .card .navlink { color: var(--accent); font-weight: 700; text-decoration: none; }
 .card .navlink { display: inline-block; margin-top: 8px; }
 .card.pinned { border: 2px solid var(--accent); }
+.card.inactive { opacity: 0.55; }
 
-/* 클릭 가능한 POI 카드 — 버튼이지만 카드처럼 보이게 */
 button.poi-card {
   display: block;
   width: 100%;
@@ -124,7 +148,6 @@ button.poi-card {
 }
 button.poi-card:active { border-color: var(--accent); }
 
-/* 라이브 카드 */
 a.streamcard { display: block; }
 .live-dot { color: #e53935; font-weight: 800; }
 .ended {
@@ -143,13 +166,10 @@ a.streamcard { display: block; }
   border-left: 6px solid var(--accent);
 }
 .callbtn.danger { border-left-color: var(--danger); }
-.callbtn .num {
-  font-size: 1.15em; font-weight: 800; color: var(--accent);
-  white-space: nowrap;
-}
+.callbtn .num { font-size: 1.1em; font-weight: 800; color: var(--accent); white-space: nowrap; }
 .callbtn.danger .num { color: var(--danger); }
 
-.notice { font-size: 0.82em; opacity: 0.75; margin: 14px 0; line-height: 1.5; }
+.notice { font-size: 0.8em; opacity: 0.75; margin: 14px 0; line-height: 1.5; }
 
 ul.tips { padding-left: 22px; }
 ul.tips li { margin: 8px 0; }
@@ -160,9 +180,65 @@ ul.tips li { margin: 8px 0; }
   background: var(--accent); color: #fff; margin-right: 6px;
 }
 
+/* ── 폼 ── */
+.post-form { display: flex; flex-direction: column; gap: 10px; }
+.post-form input, .post-form textarea, .post-form select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--bg);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.post-form input:focus, .post-form textarea:focus, .post-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.form-row { display: flex; gap: 8px; margin: 6px 0; }
+.form-row input { flex: 1; padding: 10px; border-radius: 10px; border: 2px solid var(--card); background: var(--bg); color: var(--text); font: inherit; }
+.form-error { color: var(--danger); font-size: 0.85em; font-weight: 700; }
+
+button.primary {
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+button.primary:disabled { opacity: 0.5; }
+button.primary.danger { background: var(--danger); }
+button.primary.wide { display: block; width: 100%; margin: 10px 0; }
+
+button.linklike {
+  border: none; background: none; color: var(--accent);
+  font: inherit; font-size: 0.85em; font-weight: 700;
+  cursor: pointer; margin-left: 10px; padding: 2px;
+}
+button.linklike.admin { color: var(--danger); }
+
+label.check { display: flex; align-items: center; gap: 8px; font-size: 0.9em; font-weight: 700; }
+
+.post-body { white-space: pre-wrap; margin: 4px 0; }
+.post-foot { margin-top: 6px; }
+
+.pager {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 14px 0; font-weight: 700;
+}
+.pager button {
+  padding: 10px 16px; border-radius: 10px;
+  border: 2px solid var(--card); background: var(--card);
+  color: var(--text); font: inherit; font-weight: 700; cursor: pointer;
+}
+.pager button:disabled { opacity: 0.4; }
+
 footer {
-  text-align: center; font-size: 0.8em; opacity: 0.7;
-  padding: 20px 14px 40px;
+  text-align: center; font-size: 0.78em; opacity: 0.7;
+  padding: 20px 14px;
 }
 
 .leaflet-popup-content { font-size: 15px; }

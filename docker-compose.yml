@@ -4,7 +4,9 @@ services:
     container_name: rally-backend
     environment:
       # 운영에서는 .env 파일이나 시크릿으로 주입할 것
-      RALLY_ADMIN_KEY: ${RALLY_ADMIN_KEY:?RALLY_ADMIN_KEY를 .env에 설정하세요}
+      RALLY_ADMIN_USER: ${RALLY_ADMIN_USER:-admin}
+      RALLY_ADMIN_PASS: ${RALLY_ADMIN_PASS:?RALLY_ADMIN_PASS를 .env에 설정하세요}
+      RALLY_TOKEN_SECRET: ${RALLY_TOKEN_SECRET:?RALLY_TOKEN_SECRET을 .env에 설정하세요}
     volumes:
       - rally-data:/app/data
     restart: unless-stopped

@@ -50,4 +50,14 @@ public class Poi {
 
     public void setActive(boolean active) { this.active = active; }
     public void setMemo(String memo) { this.memo = memo; }
+
+    /** 관리자 수정용 일괄 갱신 */
+    public void update(PoiType type, String name, double lat, double lng, String memo, boolean active) {
+        this.type = type;
+        this.name = name;
+        this.lat = lat;
+        this.lng = lng;
+        this.memo = memo;
+        this.active = active;
+    }
 }

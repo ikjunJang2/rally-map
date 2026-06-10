@@ -6,7 +6,7 @@ const CONTACTS = [
   { icon: '🧑‍⚖️', title: '국가인권위원회 상담', sub: '', num: '1331' },
 ];
 
-export default function EmergencyTab() {
+export default function EmergencyPage() {
   return (
     <section>
       <h2 className="tab-title">누르면 바로 전화가 걸려요</h2>

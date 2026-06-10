@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, LayersControl, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
+import { usePois } from '../hooks/useApi';
 
 function FilterChips({ active, onToggle }) {
   return (
@@ -30,7 +31,10 @@ function PoiCard({ poi, onFocus }) {
   );
 }
 
-export default function MapTab({ pois }) {
+export default function MapPage() {
+  const { data } = usePois();
+  const pois = data?.pois ?? [];
+
   const [active, setActive] = useState(() => new Set(Object.keys(TYPE_INFO)));
   const mapRef = useRef(null);
   const mapBoxRef = useRef(null);
@@ -77,7 +81,6 @@ export default function MapTab({ pois }) {
                 maxZoom={19}
               />
             </LayersControl.BaseLayer>
-            {/* 위성사진 위에 도로명·장소명 라벨 오버레이 */}
             <LayersControl.Overlay checked name="장소 이름 표시">
               <TileLayer
                 attribution='&copy; CARTO'

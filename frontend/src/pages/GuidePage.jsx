@@ -1,4 +1,4 @@
-export default function GuideTab() {
+export default function GuidePage() {
   return (
     <section>
       <div className="card">

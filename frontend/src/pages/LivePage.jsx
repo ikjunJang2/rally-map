@@ -1,7 +1,4 @@
-import { useEffect, useState } from 'react';
-import { fetchStreams } from '../api/client';
-
-const REFRESH_MS = 60_000;
+import { useStreams } from '../hooks/useApi';
 
 // 유튜브 검색 — sp=EgJAAQ%3D%3D 는 "라이브만" 필터
 const ytLiveSearch = (q) =>
@@ -13,25 +10,14 @@ const SEARCH_SHORTCUTS = [
   { label: '🔴 "올림픽공원 집회" 라이브 검색', q: '올림픽공원 집회' },
 ];
 
-// 서울시 TOPIS — 무료 공개 교통 CCTV (올림픽공원 주변 도로 확인용)
+// 무료 공개 교통 CCTV — 올림픽공원 주변 도로 상황 확인
 const CCTV_LINKS = [
   { label: '서울시 교통 CCTV 지도 (TOPIS)', url: 'https://topis.seoul.go.kr/map/openMapPage.do' },
   { label: '국가교통정보센터 CCTV', url: 'https://www.its.go.kr/map/cctv' },
 ];
 
-export default function LiveTab() {
-  const [streams, setStreams] = useState([]);
-
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      const data = await fetchStreams();
-      if (alive) setStreams(data);
-    };
-    load();
-    const t = setInterval(load, REFRESH_MS);
-    return () => { alive = false; clearInterval(t); };
-  }, []);
+export default function LivePage() {
+  const { data: streams = [] } = useStreams();
 
   return (
     <section>
@@ -67,7 +53,6 @@ export default function LiveTab() {
         <p className="meta">
           서울시·국가교통정보센터가 무료 공개하는 교통 CCTV로 올림픽공원 주변
           도로 상황(양재대로·올림픽로)을 실시간 확인할 수 있어요.
-          지도에서 올림픽공원 근처 카메라 아이콘을 누르면 됩니다.
         </p>
       </div>
       {CCTV_LINKS.map((c) => (
@@ -78,7 +63,7 @@ export default function LiveTab() {
       ))}
 
       <p className="notice">
-        라이브 목록은 주최 측이 등록하며 1분마다 자동 갱신됩니다.
+        라이브 목록은 관리자가 등록하며 1분마다 자동 갱신됩니다.
         링크는 모두 외부 서비스(유튜브·서울시)로 연결돼요.
       </p>
     </section>

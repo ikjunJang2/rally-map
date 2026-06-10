@@ -19,9 +19,24 @@
 ## 구조
 
 ```
-frontend/   React 19 + Vite + react-leaflet  (nginx 컨테이너가 서빙 + /api 프록시)
-backend/    Spring Boot + JPA + H2           (REST API: /api/pois, /api/notices)
+frontend/   React 19 + Vite — 모바일 전용 (480px 앱 프레임, 하단 탭바)
+            React Router(라우팅) + TanStack Query(서버 상태) + Context(관리자 인증)
+            react-leaflet 위성/일반 지도
+backend/    Spring Boot + JPA + H2
+            공개 API: 시설·공지·라이브 조회, 커뮤니티 글
+            관리자 API: HMAC 토큰 로그인 → 모든 데이터 CRUD
 ```
+
+### 화면
+
+| 경로 | 내용 |
+|---|---|
+| `/` | 위성/일반 지도 + 시설 카드 (클릭 시 지도 이동) |
+| `/live` | 현장 라이브 목록, 유튜브 라이브 검색, 교통 CCTV |
+| `/community` | 시민 게시판 — 카테고리(자유·정보·나눔·질문·응원), 익명+PIN |
+| `/call` | 원터치 긴급 전화 |
+| `/guide` | 권리·안전·교통 안내 |
+| `/admin` | 관리자 로그인 → 시설·공지·라이브 관리 |
 
 ## 로컬 개발
 
@@ -44,23 +59,34 @@ docker compose up -d --build
 
 ## API
 
+**공개 API**
+
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/api/pois` | 시설 목록 (`?type=TOILET` 등 필터) |
 | GET | `/api/notices` | 공지 목록 (고정 공지 우선) |
-| POST | `/api/notices` | 공지 등록 — `X-Admin-Key` 헤더 필요 |
-| DELETE | `/api/notices/{id}` | 공지 삭제 — `X-Admin-Key` 헤더 필요 |
 | GET | `/api/streams` | 현장 라이브 영상 목록 (LIVE 우선) |
-| POST | `/api/streams` | 라이브 등록 — `X-Admin-Key`, https URL만 |
-| PATCH | `/api/streams/{id}/ended` | 방송 종료 표시 — `X-Admin-Key` |
-| DELETE | `/api/streams/{id}` | 라이브 삭제 — `X-Admin-Key` |
+| GET | `/api/posts` | 커뮤니티 글 (`?category=SHARE&page=0`) |
+| POST | `/api/posts` | 글 작성 (닉네임 + 삭제용 PIN) |
+| POST | `/api/posts/{id}/delete` | 작성자 본인 삭제 (PIN 확인) |
+| POST | `/api/auth/login` | 관리자 로그인 → 토큰 발급 (12시간) |
 
-공지 등록 예시:
+**관리자 API** — `Authorization: Bearer {토큰}` 필수
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET/POST/PUT/DELETE | `/api/admin/pois[/{id}]` | 시설 CRUD (숨김 포함) |
+| POST/DELETE | `/api/admin/notices[/{id}]` | 공지 등록·삭제 |
+| POST/PATCH/DELETE | `/api/admin/streams[/{id}]` | 라이브 등록·종료·삭제 |
+| DELETE | `/api/admin/posts/{id}` | 커뮤니티 글 관리자 삭제 |
 
 ```bash
-curl -X POST http://localhost:8080/api/notices \
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -H "X-Admin-Key: $RALLY_ADMIN_KEY" \
+  -d '{"username":"admin","password":"..."}' | jq -r .token)
+
+curl -X POST http://localhost:8080/api/admin/notices \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
   -d '{"title":"물 나눔처 위치 변경","body":"동2문 안쪽으로 이동","pinned":false}'
 ```
 
@@ -71,7 +97,7 @@ curl -X POST http://localhost:8080/api/notices \
 
 ## 배포 전 체크리스트
 
-- [ ] `RALLY_ADMIN_KEY` 강한 값으로 설정
+- [ ] `RALLY_ADMIN_PASS`·`RALLY_TOKEN_SECRET` 강한 값으로 설정
 - [ ] HTTPS 리버스프록시 (Caddy/Traefik/CloudFlare) 앞단 구성
 - [ ] 긴급 연락처 유효성 확인 (민변 사무처 02-522-7284 등)
 - [ ] 트래픽 급증 대비 시 H2 → PostgreSQL 전환
