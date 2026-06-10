@@ -48,6 +48,18 @@ export interface CctvResponse {
   cameras: Cctv[];
 }
 
+export interface Law {
+  name: string;
+  link: string;
+  dept: string;
+  date: string;
+}
+
+export interface LawResponse {
+  enabled: boolean;
+  laws: Law[];
+}
+
 export type PostCategory = 'FREE' | 'INFO' | 'SHARE' | 'QUESTION' | 'CHEER';
 
 export interface Post {

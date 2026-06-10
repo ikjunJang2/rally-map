@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { CctvResponse, Comment, Notice, Poi, PoisResult, Post, PostCategory, SpringPage, Stream } from '../types';
+import type { CctvResponse, Comment, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, SpringPage, Stream } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -57,6 +57,16 @@ export function useCctvs() {
     // 카메라 목록은 백엔드가 10분 캐시 — 과한 재조회 불필요
     refetchInterval: 10 * 60_000,
     staleTime: 5 * 60_000,
+  });
+}
+
+/** 국가법령정보센터 법령 검색 — 검색어가 있을 때만 호출 */
+export function useLawSearch(q: string) {
+  return useQuery<LawResponse>({
+    queryKey: ['laws', q],
+    queryFn: () => api(`/laws?q=${encodeURIComponent(q)}`),
+    enabled: q.trim().length > 0,
+    staleTime: 10 * 60_000, // 법령은 자주 안 바뀜
   });
 }
 

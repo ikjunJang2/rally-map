@@ -571,6 +571,18 @@ body.dark .badge.hot { background: #422f06; color: #fbbf24; }
   text-align: right; margin-top: -6px;
 }
 
+/* 법령 조문 */
+.law-text {
+  white-space: pre-wrap;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  margin: 6px 0;
+  line-height: 1.7;
+}
+.law-note { font-weight: 600; color: var(--accent) !important; }
+
 .pager {
   display: flex; align-items: center; justify-content: space-between;
   margin: 14px 0; font-weight: 700;

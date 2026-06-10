@@ -38,7 +38,7 @@ backend/    Spring Boot + JPA + H2
 | `/live` | 현장 라이브 목록, 유튜브 라이브 검색, 교통 CCTV |
 | `/community` | 시민 게시판 — 카테고리·댓글·하트·인기글 TOP3, 익명+PIN |
 | `/call` | 원터치 긴급 전화 |
-| `/guide` | 권리·안전·교통 안내 |
+| `/guide` | 현장 안내 + 권리·법률 (핵심 조문 원문, 법령 검색) |
 | `/admin` | 관리자 로그인 → 시설·공지·라이브 관리 |
 
 ## 로컬 개발
@@ -131,6 +131,7 @@ curl -X POST http://localhost:8080/api/admin/notices \
 |---|---|---|
 | `YOUTUBE_API_KEY` | [console.cloud.google.com](https://console.cloud.google.com) → YouTube Data API v3 | 라이브 방송 자동 수집 (검색 15분 간격, 라이브 상태 1분 간격 확인). 썸네일·제목·채널 카드 표시 |
 | `ITS_API_KEY` | [its.go.kr/opendata](https://www.its.go.kr/opendata/opendataList?service=cctv) | 경기장 주변 2km 교통 CCTV를 앱 안에서 실시간 재생 (HLS) |
+| `LAW_OC` | [open.law.go.kr](https://open.law.go.kr) (가입 이메일 ID가 곧 키) | 안내 탭에서 법령 검색 결과를 앱 안에 표시. 미설정 시 law.go.kr 링크 폴백 |
 
 쿼터 참고: 유튜브 search.list는 호출당 100유닛(일일 무료 10,000).
 검색 간격을 1분으로 줄이면 하루를 못 버티므로 기본값(15분 검색 + 1분 상태 확인)을 유지할 것.
