@@ -87,6 +87,16 @@ export interface LawResponse {
   laws: Law[];
 }
 
+/** 관리자 외부 연동 키 설정 */
+export interface AppSetting {
+  key: string;
+  label: string;
+  help: string;
+  secret: boolean;
+  set: boolean;
+  value: string;
+}
+
 export type PostCategory = 'FREE' | 'INFO' | 'SHARE' | 'QUESTION' | 'CHEER';
 
 export interface Post {

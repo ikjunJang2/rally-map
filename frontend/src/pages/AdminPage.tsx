@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift } from 'lucide-react';
+import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useAdminPois, useAdminDeletedPosts, useAdminReports, useAdminShare, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
+import { useAdminPois, useAdminDeletedPosts, useAdminReports, useAdminShare, useAdminSettings, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
 import { REPORT_REASONS } from './CommunityPage';
 import { SHARE_STATUS } from './MapPage';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
@@ -452,6 +452,61 @@ function ShareManager() {
   );
 }
 
+/** 외부 연동 키 등록 — 저장하면 서버 재배포 없이 즉시 적용 */
+function SettingsManager() {
+  const { data: settings = [], isLoading } = useAdminSettings();
+  const toast = useToast();
+  const mutate = useAdminMutation(['admin-settings']);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  if (isLoading) return <Skeleton lines={3} />;
+
+  const valueOf = (key: string, fallback: string) => drafts[key] ?? fallback;
+  const save = (key: string, value: string) =>
+    mutate.mutate(
+      { path: '/admin/settings', method: 'PUT', body: { key, value: value.trim() } },
+      { onSuccess: () => {
+          setDrafts((d) => { const n = { ...d }; delete n[key]; return n; });
+          toast('success', value.trim() ? '저장했어요. 바로 적용됩니다' : '키를 삭제했어요');
+        } });
+
+  return (
+    <div>
+      <p className="notice" style={{ marginTop: 0 }}>
+        외부 서비스 연동 키를 여기서 등록하면 서버 재배포 없이 바로 적용돼요.
+      </p>
+      {settings.map((s) => (
+        <div key={s.key} className="card post-form">
+          <h3>
+            <KeyRound size={15} className="ic accent" aria-hidden="true" />{s.label}
+            {s.set ? <span className="badge hot">등록됨</span> : <span className="ended">미등록</span>}
+          </h3>
+          <p className="meta">{s.help}</p>
+          <div className="form-row">
+            <input placeholder={s.secret && s.set ? '등록됨 — 바꾸려면 새 키 입력' : '키 입력'}
+                   value={valueOf(s.key, s.value)}
+                   onChange={(e) => setDrafts((d) => ({ ...d, [s.key]: e.target.value }))} />
+            <button type="button" className="primary" disabled={mutate.isPending}
+                    onClick={() => save(s.key, valueOf(s.key, s.value))}>저장</button>
+          </div>
+          {s.key === 'law.oc' && (
+            <p className="notice" style={{ margin: '4px 0 0' }}>
+              <a href="https://open.law.go.kr" target="_blank" rel="noreferrer">open.law.go.kr</a>
+              {' '}에서 오픈API를 신청하면 OC를 받을 수 있어요.
+            </p>
+          )}
+          {s.set && (
+            <button className="linklike admin" style={{ marginTop: 6 }}
+                    onClick={() => { if (confirm('이 키를 삭제할까요?')) save(s.key, ''); }}>
+              키 삭제
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] = [
   { id: 'poi', label: '시설', icon: <MapIcon size={15} aria-hidden="true" />, el: <PoiManager /> },
   { id: 'notice', label: '공지', icon: <Megaphone size={15} aria-hidden="true" />, el: <NoticeManager /> },
@@ -459,6 +514,7 @@ const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] 
   { id: 'share', label: '나눔', icon: <Gift size={15} aria-hidden="true" />, el: <ShareManager /> },
   { id: 'reports', label: '신고', icon: <Flag size={15} aria-hidden="true" />, el: <ReportQueue /> },
   { id: 'deleted', label: '삭제 이력', icon: <Trash2 size={15} aria-hidden="true" />, el: <DeletedHistory /> },
+  { id: 'settings', label: '연동키', icon: <KeyRound size={15} aria-hidden="true" />, el: <SettingsManager /> },
 ];
 
 export default function AdminPage() {

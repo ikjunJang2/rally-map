@@ -27,23 +27,30 @@ public class LawController {
     private static final int UPSTREAM_PER_MINUTE = 30; // 법제처 서버 보호 — OC 정지 예방
 
     private final RestClient http = RestClient.create();
-    private final String oc;
+    private final String envOc;
     private final click.axpdev.rally.service.RateLimitService rateLimit;
+    private final click.axpdev.rally.service.SettingService settings;
 
     private record CacheEntry(List<Law> laws, java.time.Instant at) {}
     private final java.util.concurrent.ConcurrentHashMap<String, CacheEntry> cache =
             new java.util.concurrent.ConcurrentHashMap<>();
 
     public LawController(@Value("${rally.law.oc}") String oc,
-                         click.axpdev.rally.service.RateLimitService rateLimit) {
-        this.oc = oc.strip();
+                         click.axpdev.rally.service.RateLimitService rateLimit,
+                         click.axpdev.rally.service.SettingService settings) {
+        this.envOc = oc.strip();
         this.rateLimit = rateLimit;
+        this.settings = settings;
     }
+
+    /** 관리자 콘솔에서 등록한 OC 우선, 없으면 환경변수 기본값 */
+    private String oc() { return settings.get("law.oc", envOc).strip(); }
 
     public record Law(String name, String link, String dept, String date) {}
 
     @GetMapping
     public Map<String, Object> search(@RequestParam String q) {
+        String oc = oc();
         if (oc.isBlank()) return Map.of("enabled", false, "laws", List.of());
 
         String key = q.strip().toLowerCase();

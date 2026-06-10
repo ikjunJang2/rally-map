@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { AdminReport, AdminShareItem, CctvResponse, Comment, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
+import type { AdminReport, AdminShareItem, AppSetting, CctvResponse, Comment, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -230,6 +230,16 @@ export function useAdminDeletedPosts() {
   return useQuery<Post[]>({
     queryKey: ['admin-deleted-posts'],
     queryFn: () => api('/admin/posts/deleted', { token }),
+    enabled: isAdmin,
+  });
+}
+
+/** 관리자용 외부 연동 키 설정 목록 */
+export function useAdminSettings() {
+  const { token, isAdmin } = useAuth();
+  return useQuery<AppSetting[]>({
+    queryKey: ['admin-settings'],
+    queryFn: () => api('/admin/settings', { token }),
     enabled: isAdmin,
   });
 }
