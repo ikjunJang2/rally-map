@@ -4,7 +4,8 @@
 # 백엔드
 backend/target/
 backend/data/
-data/
+# 루트의 H2 DB 폴더만 무시 (앞의 / 없으면 frontend/src/data 까지 잘못 제외됨)
+/data/
 
 # 프론트엔드
 frontend/node_modules/
