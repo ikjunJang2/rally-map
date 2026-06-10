@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift, KeyRound } from 'lucide-react';
+import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift, KeyRound, UserCog } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet';
@@ -515,6 +515,51 @@ function SettingsManager() {
   );
 }
 
+/** 관리자 비밀번호 변경 — 현재 비번 + 새 비번 확인 후 교체, 성공 시 재로그인 */
+function AccountManager() {
+  const toast = useToast();
+  const { logout } = useAuth();
+  const mutate = useAdminMutation([]);
+  const [form, setForm] = useState({ current: '', next: '', confirm: '' });
+  const set = (k: keyof typeof form) =>
+    (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const tooShort = form.next.length > 0 && form.next.length < 8;
+  const mismatch = form.confirm.length > 0 && form.next !== form.confirm;
+  const canSubmit = !!form.current && form.next.length >= 8 && form.next === form.confirm;
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    mutate.mutate(
+      { path: '/admin/account/password', method: 'POST', body: { current: form.current, next: form.next } },
+      {
+        onSuccess: () => { toast('success', '비밀번호를 바꿨어요. 새 비밀번호로 다시 로그인해주세요'); logout(); },
+        onError: (err) => toast('error', err instanceof Error ? err.message : '변경에 실패했어요'),
+      });
+  };
+
+  return (
+    <form className="card post-form" onSubmit={submit}>
+      <h3><Lock size={16} className="ic accent" aria-hidden="true" />비밀번호 변경</h3>
+      <input required type="password" autoComplete="current-password" placeholder="현재 비밀번호"
+             value={form.current} onChange={set('current')} />
+      <input required type="password" autoComplete="new-password" placeholder="새 비밀번호 (8자 이상)"
+             value={form.next} onChange={set('next')} />
+      <input required type="password" autoComplete="new-password" placeholder="새 비밀번호 확인"
+             value={form.confirm} onChange={set('confirm')} />
+      {tooShort && <p className="form-error">새 비밀번호는 8자 이상이어야 해요</p>}
+      {mismatch && <p className="form-error">새 비밀번호가 서로 달라요</p>}
+      <button type="submit" className="primary" disabled={!canSubmit || mutate.isPending}>
+        비밀번호 바꾸기
+      </button>
+      <p className="notice" style={{ margin: '8px 0 0' }}>
+        바꾸면 바로 적용돼요. 이 기기 외 다른 로그인 세션은 최대 2시간 뒤 자동 만료됩니다.
+      </p>
+    </form>
+  );
+}
+
 const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] = [
   { id: 'poi', label: '시설', icon: <MapIcon size={15} aria-hidden="true" />, el: <PoiManager /> },
   { id: 'notice', label: '공지', icon: <Megaphone size={15} aria-hidden="true" />, el: <NoticeManager /> },
@@ -523,6 +568,7 @@ const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] 
   { id: 'reports', label: '신고', icon: <Flag size={15} aria-hidden="true" />, el: <ReportQueue /> },
   { id: 'deleted', label: '삭제 이력', icon: <Trash2 size={15} aria-hidden="true" />, el: <DeletedHistory /> },
   { id: 'settings', label: '연동키', icon: <KeyRound size={15} aria-hidden="true" />, el: <SettingsManager /> },
+  { id: 'account', label: '계정', icon: <UserCog size={15} aria-hidden="true" />, el: <AccountManager /> },
 ];
 
 export default function AdminPage() {
