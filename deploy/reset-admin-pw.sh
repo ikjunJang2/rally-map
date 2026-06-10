@@ -19,5 +19,10 @@ done
 
 echo "3/3 플래그를 끄고 다시 기동합니다(이후 재기동 시 재초기화 방지)…"
 $COMPOSE up -d backend
+for _ in $(seq 1 40); do
+  s=$(docker inspect -f '{{.State.Health.Status}}' rally-backend 2>/dev/null || echo none)
+  [ "$s" = "healthy" ] && break
+  sleep 3
+done
 
 echo "완료 ✅  이제 .env의 RALLY_ADMIN_PASS 비밀번호로 로그인하세요. (로그인 후 관리자 → 계정에서 새 비번으로 변경)"
