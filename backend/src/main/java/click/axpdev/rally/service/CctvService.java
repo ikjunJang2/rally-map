@@ -7,11 +7,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * ITS 국가교통정보센터 오픈API로 핸드볼경기장 주변 교통 CCTV(HLS 스트림)를 조회.
@@ -36,6 +39,8 @@ public class CctvService {
 
     private List<Cctv> cache = List.of();
     private Instant cachedAt = Instant.EPOCH;
+    // 스트림 중계(proxy)가 접근을 허용할 호스트 — ITS가 내려준 CCTV 호스트만 (SSRF 방지)
+    private volatile Set<String> allowedHosts = Set.of();
 
     public CctvService(@Value("${rally.its.api-key}") String apiKey) {
         this.apiKey = apiKey.strip();
@@ -59,19 +64,24 @@ public class CctvService {
                     .retrieve()
                     .body(JsonNode.class);
             JsonNode data = root == null ? null : root.path("response").path("data");
+            Set<String> hosts = new HashSet<>();
             if (data != null && data.isArray()) {
                 for (JsonNode c : data) {
                     double lng = c.path("coordx").asDouble();
                     double lat = c.path("coordy").asDouble();
                     String url = c.path("cctvurl").asText("");
                     String name = c.path("cctvname").asText("CCTV");
-                    // 외부 API 응답 신뢰 금지 — https 스트림만 허용 (javascript:/data: 주입 차단)
-                    if (!url.startsWith("https://")) continue;
+                    // http/https HLS 스트림만 허용 (javascript:/data: 등 주입 차단).
+                    // 실제 재생은 백엔드 프록시(/api/cctv/stream)가 https로 중계 — mixed content 회피.
+                    String host = hostOf(url);
+                    if (host == null) continue;
+                    hosts.add(host);
                     result.add(new Cctv(name, lat, lng, url, distanceM(lat, lng)));
                 }
                 result.sort(Comparator.comparingInt(Cctv::distanceM));
             }
             cache = List.copyOf(result);
+            allowedHosts = Set.copyOf(hosts);
             cachedAt = Instant.now();
             log.info("CCTV {}대 조회 (경기장 주변)", result.size());
         } catch (Exception e) {
@@ -79,6 +89,25 @@ public class CctvService {
             // 실패 시 기존 캐시 유지
         }
         return cache;
+    }
+
+    /** http/https URL의 호스트만 추출 (그 외 스킴은 null → 거부) */
+    private static String hostOf(String url) {
+        if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) return null;
+        try {
+            String host = URI.create(url).getHost();
+            return (host == null || host.isBlank()) ? null : host.toLowerCase();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** 스트림 프록시가 이 URL을 가져와도 되는지 — ITS가 내려준 호스트로 한정 (SSRF 방지) */
+    public boolean mayProxy(String url) {
+        // 캐시가 비어 있으면 채움 (서버 재시작 직후 등)
+        if (allowedHosts.isEmpty()) nearby();
+        String host = hostOf(url);
+        return host != null && allowedHosts.contains(host);
     }
 
     /** 경기장 중심과의 대략적 거리(m) — 하버사인 근사 */

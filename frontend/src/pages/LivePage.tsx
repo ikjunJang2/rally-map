@@ -99,7 +99,7 @@ function CctvSection() {
               <MapPin size={13} className="ic" aria-hidden="true" />
               경기장에서 약 {c.distanceM >= 1000 ? `${(c.distanceM / 1000).toFixed(1)}km` : `${c.distanceM}m`}
             </p>
-            {open && <CctvPlayer src={c.streamUrl} title={c.name} />}
+            {open && <CctvPlayer src={`/api/cctv/stream?u=${encodeURIComponent(c.streamUrl)}`} title={c.name} />}
             <button className="primary" style={{ marginTop: 10 }} onClick={() => setOpenUrl(open ? null : c.streamUrl)}>
               {open ? '닫기' : <><Play size={16} aria-hidden="true" /> 실시간 보기</>}
             </button>

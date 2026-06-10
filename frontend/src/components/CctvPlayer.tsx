@@ -10,8 +10,8 @@ export default function CctvPlayer({ src, title }: { src: string; title: string 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    // 프론트 2차 방어 — https HLS 스트림만 재생
-    if (!src.startsWith('https://')) return;
+    // 같은 출처(/api/cctv/stream) 프록시 경로만 재생 — 외부 URL 직접 로드 차단
+    if (!src.startsWith('/api/')) return;
 
     let destroyed = false;
     let hls: { destroy: () => void } | null = null;
