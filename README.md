@@ -62,7 +62,9 @@ docker compose up -d --build
 
 ### 운영 배포 (도메인 + 자동 HTTPS)
 
-DNS에서 `free.axpdev.click` A 레코드를 서버 IP로 연결한 뒤:
+운영 도메인: **https://www.63freedom.co.kr** (63freedom.co.kr은 www로 리다이렉트)
+
+DNS에서 `www.63freedom.co.kr`·`63freedom.co.kr` A 레코드를 서버 IP로 연결한 뒤:
 
 ```bash
 WEB_PORT=127.0.0.1:8081 docker compose --profile prod up -d --build
