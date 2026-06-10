@@ -1,18 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Tv, Radio, Play, Cctv, ExternalLink, SearchIcon, MapPin, RefreshCw, Eye, ChevronDown } from 'lucide-react';
+import { Tv, Play, Cctv, ExternalLink, MapPin, RefreshCw, Eye, ChevronDown } from 'lucide-react';
 import { useStreams, useCctvs } from '../hooks/useApi';
 import CctvPlayer from '../components/CctvPlayer';
 import type { Stream } from '../types';
-
-// 유튜브 검색 — sp=EgJAAQ%3D%3D 는 "라이브만" 필터
-const ytLiveSearch = (q: string) =>
-  `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgJAAQ%3D%3D`;
-
-const SEARCH_SHORTCUTS = [
-  { label: '"핸드볼경기장 집회" 라이브 검색', q: '핸드볼경기장 집회' },
-  { label: '"재선거 집회" 라이브 검색', q: '재선거 집회' },
-  { label: '"올림픽공원 집회" 라이브 검색', q: '올림픽공원 집회' },
-];
 
 // 외부 CCTV 지도 (보조 링크)
 const CCTV_LINKS = [
@@ -160,16 +150,6 @@ export default function LivePage() {
           <ChevronDown size={17} aria-hidden="true" /> 더보기 ({remaining}개)
         </button>
       )}
-
-      <h2 className="tab-title" style={{ marginTop: 24 }}>
-        <SearchIcon size={20} className="ic accent" aria-hidden="true" />유튜브 라이브 직접 검색
-      </h2>
-      {SEARCH_SHORTCUTS.map((s) => (
-        <a key={s.q} className="card streamcard" href={ytLiveSearch(s.q)} target="_blank" rel="noreferrer">
-          <h3><Radio size={17} className="ic red" aria-hidden="true" />{s.label}</h3>
-          <span className="navlink"><ExternalLink size={14} aria-hidden="true" /> 라이브 검색 결과 열기</span>
-        </a>
-      ))}
 
       <h2 className="tab-title" style={{ marginTop: 24 }}>
         <Cctv size={20} className="ic accent" aria-hidden="true" />경기장 주변 CCTV
