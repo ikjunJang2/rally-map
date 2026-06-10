@@ -73,6 +73,8 @@ export interface Cctv {
 export interface CctvResponse {
   enabled: boolean;
   cameras: Cctv[];
+  /** 키는 있으나 ITS 업스트림 조회 실패(지연·차단) — '없음'과 구분 */
+  error?: boolean;
 }
 
 export interface Law {

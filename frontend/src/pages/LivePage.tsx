@@ -87,8 +87,9 @@ function CctvSection() {
   if (data.cameras.length === 0) {
     return (
       <div className="card">
-        <p className="meta">주변 5km 안에서 공개된 실시간 CCTV를 찾지 못했어요.
-          교통 CCTV는 주요 간선도로 위주로 설치돼 있어요.</p>
+        <p className="meta">{data.error
+          ? '지금은 국가교통정보센터(ITS)에서 CCTV 목록을 불러올 수 없어요. 잠시 후 다시 시도해주세요.'
+          : '주변 5km 안에서 공개된 실시간 CCTV를 찾지 못했어요. 교통 CCTV는 주요 간선도로 위주로 설치돼 있어요.'}</p>
       </div>
     );
   }

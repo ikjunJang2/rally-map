@@ -21,6 +21,8 @@ public class CctvController {
     @GetMapping
     public Map<String, Object> list() {
         List<CctvService.Cctv> cameras = cctv.nearby();
-        return Map.of("enabled", cctv.enabled(), "cameras", cameras);
+        // 키는 있는데 목록이 비고 직전 조회가 실패 = 일시적으로 못 불러옴(ITS 지연·차단)
+        boolean error = cctv.enabled() && cameras.isEmpty() && cctv.lastFetchFailed();
+        return Map.of("enabled", cctv.enabled(), "cameras", cameras, "error", error);
     }
 }

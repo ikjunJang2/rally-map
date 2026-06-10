@@ -31,25 +31,35 @@ public class CctvService {
     private static final double MIN_Y = 37.472, MAX_Y = 37.562;
     private static final double CENTER_LAT = 37.51735, CENTER_LNG = 127.12640;
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
+    private static final Duration FAIL_BACKOFF = Duration.ofSeconds(60);
 
     public record Cctv(String name, double lat, double lng, String streamUrl, int distanceM) {}
 
-    private final RestClient http = RestClient.create();
+    private final RestClient http;
     private final String envApiKey;
     private final SettingService settings;
 
     private List<Cctv> cache = List.of();
-    private Instant cachedAt = Instant.EPOCH;
+    private Instant nextFetchAt = Instant.EPOCH;
+    private volatile boolean lastFetchFailed = false;
     // 스트림 중계(proxy)가 접근을 허용할 호스트 — ITS가 내려준 CCTV 호스트만 (SSRF 방지)
     private volatile Set<String> allowedHosts = Set.of();
 
     public CctvService(@Value("${rally.its.api-key}") String apiKey, SettingService settings) {
         this.envApiKey = apiKey.strip();
         this.settings = settings;
+        // ITS가 응답을 안 줄 때(지연·차단) 요청이 오래 매달리지 않도록 짧은 타임아웃
+        var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(8000);
+        this.http = RestClient.builder().requestFactory(factory).build();
     }
 
     /** 관리자 콘솔 등록 키 우선, 없으면 환경변수 기본값 */
     private String apiKey() { return settings.get("its.api-key", envApiKey).strip(); }
+
+    /** 직전 ITS 조회가 실패했는지(네트워크·차단 등) — 컨트롤러가 안내 문구 구분에 사용 */
+    public boolean lastFetchFailed() { return lastFetchFailed; }
 
     public boolean enabled() {
         return !apiKey().isBlank();
@@ -57,7 +67,7 @@ public class CctvService {
 
     public synchronized List<Cctv> nearby() {
         if (!enabled()) return List.of();
-        if (Instant.now().isBefore(cachedAt.plus(CACHE_TTL))) return cache;
+        if (Instant.now().isBefore(nextFetchAt)) return cache;
 
         String apiKey = apiKey();
         List<Cctv> result = new ArrayList<>();
@@ -88,11 +98,14 @@ public class CctvService {
             }
             cache = List.copyOf(result);
             allowedHosts = Set.copyOf(hosts);
-            cachedAt = Instant.now();
+            nextFetchAt = Instant.now().plus(CACHE_TTL);
+            lastFetchFailed = false;
             log.info("CCTV {}대 조회 (경기장 주변)", result.size());
         } catch (Exception e) {
             log.warn("ITS CCTV 조회 실패: {}", e.getMessage());
-            // 실패 시 기존 캐시 유지
+            lastFetchFailed = true;
+            // 실패 시 기존 캐시 유지하되 60초 뒤 재시도 (차단 풀리면 자동 복귀)
+            nextFetchAt = Instant.now().plus(FAIL_BACKOFF);
         }
         return cache;
     }
