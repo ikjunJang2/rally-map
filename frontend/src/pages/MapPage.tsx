@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, LayersControl, CircleMarker, Popup } from 'react-leaflet';
-import type { Map as LeafletMap, CircleMarker as LeafletCircleMarker } from 'leaflet';
+import { MapContainer, TileLayer, LayersControl, CircleMarker, Popup, useMap } from 'react-leaflet';
+import type { Map as LeafletMap, CircleMarker as LeafletCircleMarker, TileEvent } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Gift } from 'lucide-react';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
@@ -50,6 +50,35 @@ function PoiCard({ poi, onFocus }: { poi: Poi; onFocus: (poi: Poi) => void }) {
   );
 }
 
+/** 모바일 콜드로드·탭 전환 시 컨테이너 크기가 늦게 잡혀 회색이 되는 것 방지 */
+function MapResizeFix() {
+  const map = useMap();
+  useEffect(() => {
+    const fix = () => map.invalidateSize();
+    fix();
+    const t1 = setTimeout(fix, 250);
+    const t2 = setTimeout(fix, 1200);
+    window.addEventListener('resize', fix);
+    window.addEventListener('orientationchange', fix);
+    return () => {
+      clearTimeout(t1); clearTimeout(t2);
+      window.removeEventListener('resize', fix);
+      window.removeEventListener('orientationchange', fix);
+    };
+  }, [map]);
+  return null;
+}
+
+/** 타일 로드 실패(특히 위성 Esri의 간헐적 쓰로틀) 시 짧게 재시도 — 회색 패치 감소 */
+function retryTile(e: TileEvent) {
+  const tile = e.tile as HTMLImageElement;
+  const n = Number(tile.dataset.retry ?? 0);
+  if (n >= 2) return;
+  tile.dataset.retry = String(n + 1);
+  const src = tile.src;
+  setTimeout(() => { tile.src = src; }, 500 * (n + 1));
+}
+
 export default function MapPage() {
   const { data, isLoading } = usePois();
   const { data: share = [] } = useShare();
@@ -96,6 +125,7 @@ export default function MapPage() {
     <section aria-label="현장 지도">
       <div ref={mapBoxRef} style={{ scrollMarginTop: '110px' }} role="region" aria-label="현장 지도 — 화살표 키로 이동, +/- 키로 확대·축소">
         <MapContainer ref={mapRef} center={CENTER} zoom={17} className="map" scrollWheelZoom>
+          <MapResizeFix />
           {/* 타일 약관 준수: 기본은 OSM 표준(무료 공개 허용·라벨 내장),
               위성은 보조 레이어. CARTO는 그랜트 전용이라 제거함 */}
           <LayersControl position="topright">
@@ -104,6 +134,7 @@ export default function MapPage() {
                 attribution='&copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 maxZoom={19}
+                eventHandlers={{ tileerror: retryTile }}
               />
             </LayersControl.BaseLayer>
             <LayersControl.BaseLayer name="일반 지도">
@@ -111,6 +142,7 @@ export default function MapPage() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
                 url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
                 maxZoom={19}
+                eventHandlers={{ tileerror: retryTile }}
               />
             </LayersControl.BaseLayer>
           </LayersControl>
