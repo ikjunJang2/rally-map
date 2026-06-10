@@ -42,6 +42,15 @@ export default defineConfig({
             },
           },
           {
+            // Pretendard 폰트 CDN — 오프라인에서도 타이포 유지
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fonts',
+              expiration: { maxEntries: 60, maxAgeSeconds: 30 * 24 * 3600 },
+            },
+          },
+          {
             urlPattern: /\/api\/.*/,
             handler: 'NetworkFirst',
             options: {

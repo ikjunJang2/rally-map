@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import { CheckCircle, AlertTriangle } from 'lucide-react';
 
 interface Toast {
   id: number;
@@ -28,7 +29,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>
-            {t.kind === 'success' ? '✅' : '⚠️'} {t.message}
+            {t.kind === 'success'
+              ? <CheckCircle size={17} aria-hidden="true" />
+              : <AlertTriangle size={17} aria-hidden="true" />}
+            {t.message}
           </div>
         ))}
       </div>

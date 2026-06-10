@@ -1,3 +1,4 @@
+import { Tv, Radio, Play, Cctv, ExternalLink, SearchIcon } from 'lucide-react';
 import { useStreams } from '../hooks/useApi';
 
 // 유튜브 검색 — sp=EgJAAQ%3D%3D 는 "라이브만" 필터
@@ -5,9 +6,9 @@ const ytLiveSearch = (q: string) =>
   `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgJAAQ%3D%3D`;
 
 const SEARCH_SHORTCUTS = [
-  { label: '🔴 "핸드볼경기장 집회" 라이브 검색', q: '핸드볼경기장 집회' },
-  { label: '🔴 "재선거 집회" 라이브 검색', q: '재선거 집회' },
-  { label: '🔴 "올림픽공원 집회" 라이브 검색', q: '올림픽공원 집회' },
+  { label: '"핸드볼경기장 집회" 라이브 검색', q: '핸드볼경기장 집회' },
+  { label: '"재선거 집회" 라이브 검색', q: '재선거 집회' },
+  { label: '"올림픽공원 집회" 라이브 검색', q: '올림픽공원 집회' },
 ];
 
 // 무료 공개 교통 CCTV — 올림픽공원 주변 도로 상황 확인
@@ -21,7 +22,7 @@ export default function LivePage() {
 
   return (
     <section aria-label="현장 라이브와 CCTV">
-      <h2 className="tab-title">📺 현장 라이브</h2>
+      <h2 className="tab-title"><Tv size={20} className="ic accent" aria-hidden="true" />현장 라이브</h2>
 
       {streams.length === 0 && (
         <div className="card">
@@ -32,23 +33,27 @@ export default function LivePage() {
         <a key={s.id} className="card streamcard" href={s.url} target="_blank" rel="noreferrer">
           <h3>
             {s.live
-              ? <span className="live-dot">● LIVE</span>
+              ? <span className="live-dot">LIVE</span>
               : <span className="ended">종료</span>} {s.title}
           </h3>
           {s.channel && <p className="meta">{s.channel}</p>}
-          <span className="navlink">유튜브에서 보기 →</span>
+          <span className="navlink"><Play size={15} aria-hidden="true" /> 유튜브에서 보기</span>
         </a>
       ))}
 
-      <h2 className="tab-title" style={{ marginTop: 24 }}>🔍 유튜브 라이브 바로 검색</h2>
+      <h2 className="tab-title" style={{ marginTop: 24 }}>
+        <SearchIcon size={20} className="ic accent" aria-hidden="true" />유튜브 라이브 바로 검색
+      </h2>
       {SEARCH_SHORTCUTS.map((s) => (
         <a key={s.q} className="card streamcard" href={ytLiveSearch(s.q)} target="_blank" rel="noreferrer">
-          <h3>{s.label}</h3>
-          <span className="navlink">유튜브 라이브 검색 결과 →</span>
+          <h3><Radio size={17} className="ic red" aria-hidden="true" />{s.label}</h3>
+          <span className="navlink"><ExternalLink size={14} aria-hidden="true" /> 라이브 검색 결과 열기</span>
         </a>
       ))}
 
-      <h2 className="tab-title" style={{ marginTop: 24 }}>📹 주변 도로 CCTV (무료 공개)</h2>
+      <h2 className="tab-title" style={{ marginTop: 24 }}>
+        <Cctv size={20} className="ic accent" aria-hidden="true" />주변 도로 CCTV (무료 공개)
+      </h2>
       <div className="card">
         <p className="meta">
           서울시·국가교통정보센터가 무료 공개하는 교통 CCTV로 올림픽공원 주변
@@ -57,8 +62,8 @@ export default function LivePage() {
       </div>
       {CCTV_LINKS.map((c) => (
         <a key={c.url} className="card streamcard" href={c.url} target="_blank" rel="noreferrer">
-          <h3>📹 {c.label}</h3>
-          <span className="navlink">새 창에서 열기 →</span>
+          <h3><Cctv size={17} className="ic" aria-hidden="true" />{c.label}</h3>
+          <span className="navlink"><ExternalLink size={14} aria-hidden="true" /> 새 창에서 열기</span>
         </a>
       ))}
 

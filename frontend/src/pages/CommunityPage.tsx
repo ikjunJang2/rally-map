@@ -1,4 +1,8 @@
 import { useState, useTransition, type FormEvent } from 'react';
+import {
+  MessagesSquare, MessageCircle, Megaphone, Gift, HelpCircle, Heart, PenLine,
+  type LucideIcon,
+} from 'lucide-react';
 import { usePosts, useCreatePost, useDeletePostByAuthor, useAdminMutation } from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -6,12 +10,12 @@ import Skeleton from '../components/Skeleton';
 import { ApiError } from '../api/client';
 import type { Post, PostCategory } from '../types';
 
-export const CATEGORIES: Record<PostCategory, string> = {
-  FREE: '💬 자유',
-  INFO: '📢 정보공유',
-  SHARE: '🎁 물품나눔',
-  QUESTION: '❓ 질문',
-  CHEER: '📣 응원',
+export const CATEGORIES: Record<PostCategory, { label: string; Icon: LucideIcon }> = {
+  FREE: { label: '자유', Icon: MessageCircle },
+  INFO: { label: '정보공유', Icon: Megaphone },
+  SHARE: { label: '물품나눔', Icon: Gift },
+  QUESTION: { label: '질문', Icon: HelpCircle },
+  CHEER: { label: '응원', Icon: Heart },
 };
 
 function timeAgo(iso: string): string {
@@ -83,10 +87,13 @@ function PostCard({ post }: { post: Post }) {
     }
   };
 
+  const cat = CATEGORIES[post.category];
   return (
     <article className="card">
       <h3>
-        <span className="badge">{CATEGORIES[post.category] ?? post.category}</span>
+        <span className="badge">
+          {cat ? <><cat.Icon size={12} aria-hidden="true" /> {cat.label}</> : post.category}
+        </span>
         {post.title}
       </h3>
       {post.body && <p className="meta post-body">{post.body}</p>}
@@ -132,22 +139,23 @@ export default function CommunityPage() {
 
   return (
     <section aria-label="시민 소통 게시판">
-      <h2 className="tab-title">💬 시민 소통</h2>
+      <h2 className="tab-title"><MessagesSquare size={20} className="ic accent" aria-hidden="true" />시민 소통</h2>
 
       <div className="chiprow" role="group" aria-label="카테고리 필터">
         <button className={category === null ? 'on' : ''} aria-pressed={category === null}
                 onClick={() => selectCategory(null)}>전체</button>
-        {(Object.entries(CATEGORIES) as [PostCategory, string][]).map(([key, label]) => (
+        {(Object.entries(CATEGORIES) as [PostCategory, (typeof CATEGORIES)[PostCategory]][]).map(([key, cat]) => (
           <button key={key} className={category === key ? 'on' : ''} aria-pressed={category === key}
                   onClick={() => selectCategory(key)}>
-            {label}
+            <cat.Icon size={15} aria-hidden="true" />
+            {cat.label}
           </button>
         ))}
       </div>
 
       <button className="primary wide" aria-expanded={writing} aria-controls="post-form-area"
               onClick={() => setWriting(!writing)}>
-        {writing ? '닫기' : '✏️ 글 쓰기'}
+        {writing ? '닫기' : <><PenLine size={17} aria-hidden="true" /> 글 쓰기</>}
       </button>
       <div id="post-form-area" aria-live="polite">
         {writing && <PostForm category={category} onDone={() => setWriting(false)} />}

@@ -13,13 +13,14 @@ function FilterChips({ active, onToggle }: {
 }) {
   return (
     <div className="chiprow" role="group" aria-label="시설 종류 필터">
-      {(Object.entries(TYPE_INFO) as [PoiType, { label: string }][]).map(([key, info]) => (
+      {(Object.entries(TYPE_INFO) as [PoiType, (typeof TYPE_INFO)[PoiType]][]).map(([key, info]) => (
         <button
           key={key}
           className={active.has(key) ? 'on' : ''}
           aria-pressed={active.has(key)}
           onClick={() => onToggle(key)}
         >
+          <info.Icon size={16} aria-hidden="true" />
           {info.label}
         </button>
       ))}
@@ -28,10 +29,13 @@ function FilterChips({ active, onToggle }: {
 }
 
 function PoiCard({ poi, onFocus }: { poi: Poi; onFocus: (poi: Poi) => void }) {
-  const info = TYPE_INFO[poi.type] ?? { label: poi.type };
+  const info = TYPE_INFO[poi.type];
   return (
     <button className="card poi-card" onClick={() => onFocus(poi)}>
-      <h3>{info.label} {poi.name}</h3>
+      <h3>
+        {info && <span className="poi-ic" style={{ color: info.color }}><info.Icon size={18} aria-hidden="true" /></span>}
+        {poi.name}
+      </h3>
       {poi.memo && <p className="meta">{poi.memo}</p>}
       <span className="navlink">지도에서 보기 ↑</span>
     </button>
@@ -84,14 +88,14 @@ export default function MapPage() {
       <div ref={mapBoxRef} style={{ scrollMarginTop: '110px' }} role="region" aria-label="현장 지도 — 화살표 키로 이동, +/- 키로 확대·축소">
         <MapContainer ref={mapRef} center={CENTER} zoom={17} className="map" scrollWheelZoom>
           <LayersControl position="topright">
-            <LayersControl.BaseLayer checked name="🛰️ 위성 (실사)">
+            <LayersControl.BaseLayer checked name="위성 (실사)">
               <TileLayer
                 attribution='&copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 maxZoom={19}
               />
             </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="🗺️ 일반 지도">
+            <LayersControl.BaseLayer name="일반 지도">
               <TileLayer
                 attribution='&copy; OpenStreetMap &copy; CARTO'
                 url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
@@ -122,7 +126,7 @@ export default function MapPage() {
               >
                 {/* autoPanPadding: 좁은 화면에서 팝업이 헤더·탭바에 가리지 않게 */}
                 <Popup autoPanPadding={[24, 96]} maxWidth={280}>
-                  <b>{info.label} {p.name}</b><br />{p.memo}
+                  <b>{p.name}</b><br />{p.memo}
                 </Popup>
               </CircleMarker>
             );
@@ -137,7 +141,7 @@ export default function MapPage() {
         : visible.map((p) => <PoiCard key={p.id} poi={p} onFocus={focusPoi} />)}
 
       <p className="notice">
-        ⚠️ 시설 위치·운영시간은 현장 사정에 따라 다를 수 있어요. 위치 데이터: OpenStreetMap.
+        시설 위치·운영시간은 현장 사정에 따라 다를 수 있어요. 위치 데이터: OpenStreetMap.
         본 서비스는 위치 추적·로그인·광고가 전혀 없습니다.
       </p>
     </section>

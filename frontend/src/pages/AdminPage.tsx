@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useAdminPois, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
@@ -27,7 +28,7 @@ function LoginForm() {
 
   return (
     <form className="card post-form" onSubmit={submit}>
-      <h3>🔐 관리자 로그인</h3>
+      <h3><Lock size={16} className="ic accent" aria-hidden="true" />관리자 로그인</h3>
       <input required autoComplete="username" placeholder="아이디" aria-label="관리자 아이디"
              value={form.username} onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))} />
       <input required type="password" autoComplete="current-password" placeholder="비밀번호" aria-label="관리자 비밀번호"
@@ -115,7 +116,9 @@ function PoiManager() {
 
   return (
     <div>
-      <button className="primary wide" onClick={() => startEdit(null)}>＋ 시설 추가</button>
+      <button className="primary wide" onClick={() => startEdit(null)}>
+        <Plus size={17} aria-hidden="true" /> 시설 추가
+      </button>
       {pois.map((p) => (
         <div key={p.id} className={`card ${p.active ? '' : 'inactive'}`}>
           <h3>{TYPE_INFO[p.type]?.label ?? p.type} {p.name} {!p.active && <span className="ended">숨김</span>}</h3>
@@ -178,13 +181,13 @@ function NoticeManager() {
         <label className="check">
           <input type="checkbox" checked={form.pinned}
                  onChange={(e) => setForm((f) => ({ ...f, pinned: e.target.checked }))} />
-          📌 상단 고정
+          <Pin size={14} aria-hidden="true" /> 상단 고정
         </label>
         <button type="submit" className="primary" disabled={mutate.isPending}>공지 등록</button>
       </form>
       {notices.map((n) => (
         <div key={n.id} className="card">
-          <h3>{n.pinned ? '📌 ' : ''}{n.title}</h3>
+          <h3>{n.pinned && <Pin size={14} className="ic accent" aria-label="고정됨" />}{n.title}</h3>
           <p className="meta">{n.body}</p>
           <button className="linklike admin" onClick={() =>
             mutate.mutate({ path: `/admin/notices/${n.id}`, method: 'DELETE' },
@@ -224,7 +227,7 @@ function StreamManager() {
       </form>
       {streams.map((s) => (
         <div key={s.id} className="card">
-          <h3>{s.live ? <span className="live-dot">● LIVE</span> : <span className="ended">종료</span>} {s.title}</h3>
+          <h3>{s.live ? <span className="live-dot">LIVE</span> : <span className="ended">종료</span>} {s.title}</h3>
           <p className="meta">{s.channel ? `${s.channel} · ` : ''}{s.url}</p>
           <p className="meta">
             {s.live && (
@@ -242,10 +245,10 @@ function StreamManager() {
   );
 }
 
-const SECTIONS: { id: string; label: string; el: ReactNode }[] = [
-  { id: 'poi', label: '🗺️ 시설', el: <PoiManager /> },
-  { id: 'notice', label: '📢 공지', el: <NoticeManager /> },
-  { id: 'stream', label: '📺 라이브', el: <StreamManager /> },
+const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] = [
+  { id: 'poi', label: '시설', icon: <MapIcon size={15} aria-hidden="true" />, el: <PoiManager /> },
+  { id: 'notice', label: '공지', icon: <Megaphone size={15} aria-hidden="true" />, el: <NoticeManager /> },
+  { id: 'stream', label: '라이브', icon: <Tv size={15} aria-hidden="true" />, el: <StreamManager /> },
 ];
 
 export default function AdminPage() {
@@ -263,7 +266,7 @@ export default function AdminPage() {
   if (!isAdmin) {
     return (
       <section aria-label="관리자 로그인">
-        <h2 className="tab-title">⚙️ 관리자</h2>
+        <h2 className="tab-title"><Settings size={20} className="ic accent" aria-hidden="true" />관리자</h2>
         <LoginForm />
       </section>
     );
@@ -272,13 +275,14 @@ export default function AdminPage() {
   return (
     <section aria-label="관리자 콘솔">
       <h2 className="tab-title">
-        ⚙️ 관리자
-        <button className="linklike" onClick={logout} style={{ float: 'right' }}>로그아웃</button>
+        <Settings size={20} className="ic accent" aria-hidden="true" />관리자
+        <button className="linklike" onClick={logout} style={{ marginLeft: 'auto' }}>로그아웃</button>
       </h2>
       <div className="chiprow" role="group" aria-label="관리 영역">
         {SECTIONS.map((s) => (
           <button key={s.id} className={section === s.id ? 'on' : ''} aria-pressed={section === s.id}
                   onClick={() => setSection(s.id)}>
+            {s.icon}
             {s.label}
           </button>
         ))}

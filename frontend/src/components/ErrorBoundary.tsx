@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -26,7 +27,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <div className="card" role="alert">
-          <h3>⚠️ 화면을 표시하지 못했어요</h3>
+          <h3><AlertTriangle size={17} className="ic red" aria-hidden="true" />화면을 표시하지 못했어요</h3>
           <p className="meta">잠시 후 다시 시도해주세요. 문제가 계속되면 새로고침해주세요.</p>
           <button className="primary" onClick={this.reset}>다시 시도</button>
         </div>
