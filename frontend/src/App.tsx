@@ -1,0 +1,37 @@
+import { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/Layout';
+import Skeleton from './components/Skeleton';
+
+// 라우트 단위 코드 스플리팅 — 지도(leaflet) 같은 무거운 페이지는 필요할 때만 로드
+const MapPage = lazy(() => import('./pages/MapPage'));
+const LivePage = lazy(() => import('./pages/LivePage'));
+const CommunityPage = lazy(() => import('./pages/CommunityPage'));
+const EmergencyPage = lazy(() => import('./pages/EmergencyPage'));
+const GuidePage = lazy(() => import('./pages/GuidePage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+
+function Loading() {
+  return (
+    <>
+      <Skeleton lines={2} />
+      <Skeleton lines={4} />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<Suspense fallback={<Loading />}><MapPage /></Suspense>} />
+        <Route path="live" element={<Suspense fallback={<Loading />}><LivePage /></Suspense>} />
+        <Route path="community" element={<Suspense fallback={<Loading />}><CommunityPage /></Suspense>} />
+        <Route path="call" element={<Suspense fallback={<Loading />}><EmergencyPage /></Suspense>} />
+        <Route path="guide" element={<Suspense fallback={<Loading />}><GuidePage /></Suspense>} />
+        <Route path="admin" element={<Suspense fallback={<Loading />}><AdminPage /></Suspense>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  );
+}

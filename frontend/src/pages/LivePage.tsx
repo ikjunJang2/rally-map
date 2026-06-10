@@ -1,7 +1,7 @@
 import { useStreams } from '../hooks/useApi';
 
 // 유튜브 검색 — sp=EgJAAQ%3D%3D 는 "라이브만" 필터
-const ytLiveSearch = (q) =>
+const ytLiveSearch = (q: string) =>
   `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgJAAQ%3D%3D`;
 
 const SEARCH_SHORTCUTS = [
@@ -20,7 +20,7 @@ export default function LivePage() {
   const { data: streams = [] } = useStreams();
 
   return (
-    <section>
+    <section aria-label="현장 라이브와 CCTV">
       <h2 className="tab-title">📺 현장 라이브</h2>
 
       {streams.length === 0 && (
@@ -63,7 +63,7 @@ export default function LivePage() {
       ))}
 
       <p className="notice">
-        라이브 목록은 관리자가 등록하며 1분마다 자동 갱신됩니다.
+        라이브 목록은 운영진이 등록하며 1분마다 자동 갱신됩니다.
         링크는 모두 외부 서비스(유튜브·서울시)로 연결돼요.
       </p>
     </section>

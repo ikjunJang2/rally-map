@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,9 +37,9 @@ public class AdminController {
     @GetMapping("/pois")
     public List<Poi> allPois() { return pois.findAll(); }
 
-    public record PoiRequest(@NotNull PoiType type, @NotBlank String name,
+    public record PoiRequest(@NotNull PoiType type, @NotBlank @Size(max = 100) String name,
                              @NotNull Double lat, @NotNull Double lng,
-                             String memo, Boolean active) {}
+                             @Size(max = 500) String memo, Boolean active) {}
 
     @PostMapping("/pois")
     public ResponseEntity<Poi> createPoi(@Valid @RequestBody PoiRequest req) {
@@ -65,7 +66,8 @@ public class AdminController {
     }
 
     // ── 공지 ─────────────────────────────────────────────
-    public record NoticeRequest(@NotBlank String title, String body, boolean pinned) {}
+    public record NoticeRequest(@NotBlank @Size(max = 200) String title,
+                                @Size(max = 2000) String body, boolean pinned) {}
 
     @PostMapping("/notices")
     public ResponseEntity<Notice> createNotice(@Valid @RequestBody NoticeRequest req) {
@@ -81,9 +83,9 @@ public class AdminController {
 
     // ── 라이브 ───────────────────────────────────────────
     public record StreamRequest(
-            @NotBlank String title,
-            @NotBlank @Pattern(regexp = "https://.*", message = "https URL만 허용") String url,
-            String channel, Boolean live) {}
+            @NotBlank @Size(max = 200) String title,
+            @NotBlank @Size(max = 500) @Pattern(regexp = "https://.*", message = "https URL만 허용") String url,
+            @Size(max = 100) String channel, Boolean live) {}
 
     @PostMapping("/streams")
     public ResponseEntity<Stream> createStream(@Valid @RequestBody StreamRequest req) {

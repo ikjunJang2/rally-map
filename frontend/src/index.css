@@ -4,6 +4,7 @@
   --accent: #0b57d0;
   --card: #f3f4f6;
   --danger: #c5221f;
+  --nav-inactive: #50545b; /* 흰 배경 대비 약 7:1 — WCAG AA 충족 */
   --font-base: 17px;
   --nav-h: 64px;
 }
@@ -12,6 +13,7 @@ body.dark {
   --text: #f1f1f1;
   --card: #232336;
   --accent: #7baaf7;
+  --nav-inactive: #aeb3c2;
 }
 body.big { --font-base: 21px; }
 
@@ -43,8 +45,25 @@ body.dark { background: #0a0a12; }
   background: var(--bg);
   border-bottom: 2px solid var(--card);
   padding: 10px 14px;
+  /* 노치 기기에서 상태바와 겹치지 않게 */
+  padding-top: max(10px, env(safe-area-inset-top));
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
+
+/* 키보드 사용자용 본문 바로가기 — 포커스 시에만 표시 */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 12px;
+  z-index: 2000;
+  padding: 12px 18px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  border-radius: 0 0 10px 10px;
+  text-decoration: none;
+}
+.skip-link:focus { top: 0; }
 .app-header h1 { font-size: 1em; }
 .app-header .venue {
   font-size: 0.7em; font-weight: 700; color: var(--accent);
@@ -55,7 +74,13 @@ body.dark { background: #0a0a12; }
 .toggles { display: flex; align-items: center; gap: 6px; }
 .toggles button, .toggles .admin-link {
   font-size: 0.82em;
-  padding: 7px 10px;
+  /* 44×44px 최소 터치 타깃 (WCAG 2.5.5) */
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 9px;
   border: 2px solid var(--accent);
   background: var(--bg);
   color: var(--accent);
@@ -71,6 +96,86 @@ body.dark { background: #0a0a12; }
 .banner { text-align: center; padding: 8px; font-weight: 700; font-size: 0.88em; }
 .banner.warn { background: #fde293; color: #5f4b00; }
 .banner.info { background: #e8f0fe; color: #174ea6; }
+
+/* ── 헌법 제1조 2항 히어로 ── */
+.hero {
+  padding: 22px 18px 16px;
+  background: linear-gradient(160deg, #1a1a2e 0%, #2c3e6b 100%);
+  color: #fff;
+  text-align: center;
+}
+.hero-quote {
+  font-size: 1.12em;
+  line-height: 1.7;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  word-break: keep-all;
+}
+.hero-quote b { color: #9ec1ff; }
+.hero-source {
+  margin-top: 8px;
+  font-size: 0.78em;
+  opacity: 0.75;
+}
+
+/* ── 토스트 ── */
+.toast-stack {
+  position: fixed;
+  bottom: calc(var(--nav-h) + 14px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 440px;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9em;
+  color: #fff;
+  background: #2e7d32;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  animation: toast-in 0.25s ease-out;
+}
+.toast.error { background: #c5221f; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 스켈레톤 ── */
+.skeleton-line {
+  height: 14px;
+  border-radius: 7px;
+  margin: 10px 0;
+  background: linear-gradient(90deg, var(--bg) 25%, var(--card) 50%, var(--bg) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* 움직임 최소화 선호 시 애니메이션 끔 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 키보드 포커스 표시 */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
 
 /* ── 하단 탭바 (앱 스타일) ── */
 .bottom-nav {
@@ -94,15 +199,15 @@ body.dark { background: #0a0a12; }
   align-items: center;
   justify-content: center;
   gap: 2px;
+  height: 100%;
+  min-height: 44px; /* 최소 터치 타깃 명시 */
   font-size: 0.72em;
   font-weight: 700;
-  color: var(--text);
-  opacity: 0.55;
+  color: var(--nav-inactive); /* opacity 대신 대비 충족 색상 */
   text-decoration: none;
 }
 .bottom-nav a .icon { font-size: 1.7em; }
 .bottom-nav a.active {
-  opacity: 1;
   color: var(--accent);
 }
 
@@ -113,7 +218,8 @@ main { padding: 14px; }
 
 .chiprow { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .chiprow button {
-  padding: 9px 13px;
+  padding: 11px 15px;
+  min-height: 44px; /* 최소 터치 타깃 */
   border-radius: 999px;
   border: 2px solid var(--card);
   background: var(--card);
@@ -221,6 +327,14 @@ button.linklike {
 button.linklike.admin { color: var(--danger); }
 
 label.check { display: flex; align-items: center; gap: 8px; font-size: 0.9em; font-weight: 700; }
+
+label.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85em;
+  font-weight: 700;
+}
 
 .post-body { white-space: pre-wrap; margin: 4px 0; }
 .post-foot { margin-top: 6px; }

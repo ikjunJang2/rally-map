@@ -1,8 +1,11 @@
-# 🕊️ 집회 한 장 지도 (Rally One-Page Map)
+# 🕊️ 주권자의 광장
 
-집회 참가 시민을 위한 현장 정보 서비스.
-화장실 · 편의점 · 지하철 출구 · 집결지 · 물품 나눔처를 **한 화면 지도**에 보여주고,
-긴급 연락처 원터치 전화와 권리·안전 안내를 제공합니다.
+> **"대한민국의 주권은 국민에게 있고, 모든 권력은 국민으로부터 나온다."**
+> — 대한민국 헌법 제1조 2항
+
+광장에 모인 시민을 위한 현장 정보 서비스.
+화장실 · 편의점 · 지하철 출구 · 모임터 · 물품 나눔처를 **한 화면 지도**에 보여주고,
+현장 라이브 · 시민 커뮤니티 · 긴급 연락처 · 권리·안전 안내를 제공합니다.
 
 현재 대상: **SK올림픽핸드볼경기장** (올림픽공원, 송파구 올림픽로 424) 일대
 — 좌표 데이터는 OpenStreetMap 실측 기반.
@@ -19,9 +22,9 @@
 ## 구조
 
 ```
-frontend/   React 19 + Vite — 모바일 전용 (480px 앱 프레임, 하단 탭바)
-            React Router(라우팅) + TanStack Query(서버 상태) + Context(관리자 인증)
-            react-leaflet 위성/일반 지도
+frontend/   React 19 + TypeScript(strict) + Vite — 모바일 전용 (480px 앱 프레임, 하단 탭바)
+            React Router(lazy 라우트 스플리팅) + TanStack Query(서버 상태) + Context(인증·테마·토스트)
+            react-leaflet 위성/일반 지도, PWA(오프라인 타일·API 캐시), ErrorBoundary, 스켈레톤 로딩
 backend/    Spring Boot + JPA + H2
             공개 API: 시설·공지·라이브 조회, 커뮤니티 글
             관리자 API: HMAC 토큰 로그인 → 모든 데이터 CRUD

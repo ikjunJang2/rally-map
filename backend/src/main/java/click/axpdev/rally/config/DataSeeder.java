@@ -24,7 +24,7 @@ public class DataSeeder {
         return args -> {
             if (pois.count() == 0) {
                 pois.saveAll(List.of(
-                    new Poi(MEET,   "집결 장소 (SK올림픽핸드볼경기장 앞)", 37.51735, 127.12640, "주최 측 공지에 따라 변경될 수 있음 · 동2문 인근"),
+                    new Poi(MEET,   "모임 장소 (SK올림픽핸드볼경기장 앞)", 37.51735, 127.12640, "주최 측 공지에 따라 변경될 수 있음 · 동2문 인근"),
                     new Poi(SUBWAY, "올림픽공원역 (5·9호선)", 37.51652, 127.13089, "3번 출구 → 동2문 방면, 도보 약 5분"),
                     new Poi(SUBWAY, "몽촌토성역 (8호선)", 37.51753, 127.11267, "1번 출구, 도보 약 15분"),
                     new Poi(TOILET, "공중화장실 (경기장 서측)", 37.51824, 127.12302, "올림픽공원 내"),
@@ -45,7 +45,7 @@ public class DataSeeder {
             }
             if (notices.count() == 0) {
                 notices.save(new Notice(
-                    "안전한 집회 되세요",
+                    "평화로운 하루 되세요",
                     "이 페이지의 시설 정보는 OpenStreetMap 기반입니다. 현장 상황에 따라 다를 수 있으니 진행 요원의 안내를 우선하세요.",
                     true
                 ));

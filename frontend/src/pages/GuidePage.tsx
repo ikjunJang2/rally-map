@@ -1,6 +1,6 @@
 export default function GuidePage() {
   return (
-    <section>
+    <section aria-label="권리와 안전 안내">
       <div className="card">
         <h3><span className="badge">권리</span>평화로운 집회는 헌법이 보장합니다</h3>
         <p className="meta">
@@ -36,7 +36,7 @@ export default function GuidePage() {
         <p className="meta">
           5·9호선 <b>올림픽공원역 3번 출구</b>(동2문 방면, 도보 5분),
           8호선 <b>몽촌토성역 1번 출구</b>(도보 15분).
-          집회 당일 주변 도로가 통제될 수 있으니 대중교통을 이용하세요.<br />
+          행사 당일 주변 도로가 통제될 수 있으니 대중교통을 이용하세요.<br />
           실시간 교통통제: <a href="https://m.topis.seoul.go.kr" target="_blank" rel="noreferrer">서울 TOPIS</a>
         </p>
       </div>

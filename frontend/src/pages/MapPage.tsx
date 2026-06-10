@@ -1,16 +1,23 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, LayersControl, CircleMarker, Popup } from 'react-leaflet';
+import type { Map as LeafletMap, CircleMarker as LeafletCircleMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
 import { usePois } from '../hooks/useApi';
+import Skeleton from '../components/Skeleton';
+import type { Poi, PoiType } from '../types';
 
-function FilterChips({ active, onToggle }) {
+function FilterChips({ active, onToggle }: {
+  active: Set<PoiType>;
+  onToggle: (key: PoiType) => void;
+}) {
   return (
-    <div className="chiprow">
-      {Object.entries(TYPE_INFO).map(([key, info]) => (
+    <div className="chiprow" role="group" aria-label="시설 종류 필터">
+      {(Object.entries(TYPE_INFO) as [PoiType, { label: string }][]).map(([key, info]) => (
         <button
           key={key}
           className={active.has(key) ? 'on' : ''}
+          aria-pressed={active.has(key)}
           onClick={() => onToggle(key)}
         >
           {info.label}
@@ -20,51 +27,61 @@ function FilterChips({ active, onToggle }) {
   );
 }
 
-function PoiCard({ poi, onFocus }) {
+function PoiCard({ poi, onFocus }: { poi: Poi; onFocus: (poi: Poi) => void }) {
   const info = TYPE_INFO[poi.type] ?? { label: poi.type };
   return (
     <button className="card poi-card" onClick={() => onFocus(poi)}>
       <h3>{info.label} {poi.name}</h3>
-      <p className="meta">{poi.memo}</p>
+      {poi.memo && <p className="meta">{poi.memo}</p>}
       <span className="navlink">지도에서 보기 ↑</span>
     </button>
   );
 }
 
 export default function MapPage() {
-  const { data } = usePois();
-  const pois = data?.pois ?? [];
+  const { data, isLoading } = usePois();
+  const pois = useMemo(() => data?.pois ?? [], [data]);
 
-  const [active, setActive] = useState(() => new Set(Object.keys(TYPE_INFO)));
-  const mapRef = useRef(null);
-  const mapBoxRef = useRef(null);
-  const markerRefs = useRef({});
+  const [active, setActive] = useState<Set<PoiType>>(
+    () => new Set(Object.keys(TYPE_INFO) as PoiType[]),
+  );
+  const mapRef = useRef<LeafletMap | null>(null);
+  const mapBoxRef = useRef<HTMLDivElement | null>(null);
+  const markerRefs = useRef<Record<number, LeafletCircleMarker>>({});
+  const popupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const toggle = (key) => {
+  // 언마운트 시 팝업 타이머 정리
+  useEffect(() => () => {
+    if (popupTimer.current) clearTimeout(popupTimer.current);
+  }, []);
+
+  const toggle = (key: PoiType) => {
     setActive((prev) => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
 
   const visible = useMemo(
     () => pois.filter((p) => active.has(p.type)),
-    [pois, active]
+    [pois, active],
   );
 
   /** 카드 클릭 → 지도 위치로 부드럽게 이동 + 팝업 열기 */
-  const focusPoi = (poi) => {
+  const focusPoi = (poi: Poi) => {
     mapBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     const map = mapRef.current;
     if (!map) return;
     map.flyTo([poi.lat, poi.lng], 18, { duration: 0.8 });
-    setTimeout(() => markerRefs.current[poi.id]?.openPopup(), 900);
+    if (popupTimer.current) clearTimeout(popupTimer.current);
+    popupTimer.current = setTimeout(() => markerRefs.current[poi.id]?.openPopup(), 900);
   };
 
   return (
-    <section>
-      <div ref={mapBoxRef} style={{ scrollMarginTop: '110px' }}>
+    <section aria-label="현장 지도">
+      <div ref={mapBoxRef} style={{ scrollMarginTop: '110px' }} role="region" aria-label="현장 지도 — 화살표 키로 이동, +/- 키로 확대·축소">
         <MapContainer ref={mapRef} center={CENTER} zoom={17} className="map" scrollWheelZoom>
           <LayersControl position="topright">
             <LayersControl.BaseLayer checked name="🛰️ 위성 (실사)">
@@ -94,12 +111,19 @@ export default function MapPage() {
             return (
               <CircleMarker
                 key={p.id}
-                ref={(m) => { markerRefs.current[p.id] = m; }}
+                ref={(m) => {
+                  // 언마운트 시 키를 지워 참조 누적 방지
+                  if (m) markerRefs.current[p.id] = m;
+                  else delete markerRefs.current[p.id];
+                }}
                 center={[p.lat, p.lng]}
                 radius={11}
                 pathOptions={{ color: info.color, fillColor: info.color, fillOpacity: 0.85, weight: 2 }}
               >
-                <Popup><b>{info.label} {p.name}</b><br />{p.memo}</Popup>
+                {/* autoPanPadding: 좁은 화면에서 팝업이 헤더·탭바에 가리지 않게 */}
+                <Popup autoPanPadding={[24, 96]} maxWidth={280}>
+                  <b>{info.label} {p.name}</b><br />{p.memo}
+                </Popup>
               </CircleMarker>
             );
           })}
@@ -108,9 +132,9 @@ export default function MapPage() {
 
       <FilterChips active={active} onToggle={toggle} />
 
-      <div>
-        {visible.map((p) => <PoiCard key={p.id} poi={p} onFocus={focusPoi} />)}
-      </div>
+      {isLoading
+        ? <Skeleton lines={3} />
+        : visible.map((p) => <PoiCard key={p.id} poi={p} onFocus={focusPoi} />)}
 
       <p className="notice">
         ⚠️ 시설 위치·운영시간은 현장 사정에 따라 다를 수 있어요. 위치 데이터: OpenStreetMap.
