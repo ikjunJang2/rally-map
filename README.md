@@ -68,7 +68,8 @@ docker compose up -d --build
 |---|---|---|
 | GET | `/api/pois` | 시설 목록 (`?type=TOILET` 등 필터) |
 | GET | `/api/notices` | 공지 목록 (고정 공지 우선) |
-| GET | `/api/streams` | 현장 라이브 영상 목록 (LIVE 우선) |
+| GET | `/api/streams` | 현장 라이브 목록 — 유튜브 자동 수집분 포함 (썸네일·채널) |
+| GET | `/api/cctvs` | 경기장 주변 교통 CCTV 목록 + HLS 스트림 URL |
 | GET | `/api/posts` | 커뮤니티 글 (`?category=SHARE&page=0`) |
 | POST | `/api/posts` | 글 작성 (닉네임 + 삭제용 PIN) |
 | POST | `/api/posts/{id}/delete` | 작성자 본인 삭제 (PIN 확인) |
@@ -97,6 +98,17 @@ curl -X POST http://localhost:8080/api/admin/notices \
 
 1. `backend/.../config/DataSeeder.java` 의 좌표 교체 (출처: OpenStreetMap)
 2. `frontend/src/data/fallbackPois.js` 를 동일하게 맞춤 (CENTER 포함)
+
+## 자동 연동 (선택 — 키만 넣으면 켜짐)
+
+| 환경변수 | 발급처 | 효과 |
+|---|---|---|
+| `YOUTUBE_API_KEY` | [console.cloud.google.com](https://console.cloud.google.com) → YouTube Data API v3 | 라이브 방송 자동 수집 (검색 15분 간격, 라이브 상태 1분 간격 확인). 썸네일·제목·채널 카드 표시 |
+| `ITS_API_KEY` | [its.go.kr/opendata](https://www.its.go.kr/opendata/opendataList?service=cctv) | 경기장 주변 2km 교통 CCTV를 앱 안에서 실시간 재생 (HLS) |
+
+쿼터 참고: 유튜브 search.list는 호출당 100유닛(일일 무료 10,000).
+검색 간격을 1분으로 줄이면 하루를 못 버티므로 기본값(15분 검색 + 1분 상태 확인)을 유지할 것.
+프론트는 1분마다 서버 캐시를 읽으므로 사용자는 1분 단위 최신 목록을 본다.
 
 ## 배포 전 체크리스트
 

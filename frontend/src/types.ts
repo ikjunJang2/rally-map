@@ -25,8 +25,24 @@ export interface Stream {
   title: string;
   url: string;
   channel: string | null;
+  videoId: string | null;
+  thumbnail: string | null;
+  source: 'MANUAL' | 'YOUTUBE';
   live: boolean;
   createdAt: string;
+}
+
+export interface Cctv {
+  name: string;
+  lat: number;
+  lng: number;
+  streamUrl: string;
+  distanceM: number;
+}
+
+export interface CctvResponse {
+  enabled: boolean;
+  cameras: Cctv[];
 }
 
 export type PostCategory = 'FREE' | 'INFO' | 'SHARE' | 'QUESTION' | 'CHEER';

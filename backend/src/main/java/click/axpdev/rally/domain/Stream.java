@@ -4,9 +4,11 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 
-/** 현장 라이브 영상 (유튜브 등) — 주최 측이 관리 키로 등록 */
+/** 현장 라이브 영상 — 운영진 수동 등록(MANUAL) 또는 유튜브 자동 수집(YOUTUBE) */
 @Entity
 public class Stream {
+
+    public enum Source { MANUAL, YOUTUBE }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,6 +24,18 @@ public class Stream {
 
     /** 채널·출처 이름 (선택) */
     private String channel;
+
+    /** 유튜브 영상 ID — 자동 수집 중복 방지 키 */
+    @Column(unique = true)
+    private String videoId;
+
+    /** 썸네일 이미지 URL */
+    @Column(length = 500)
+    private String thumbnail;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Source source = Source.MANUAL;
 
     /** false면 종료된 방송 — 목록 하단에 표시 */
     @Column(nullable = false)
@@ -39,12 +53,32 @@ public class Stream {
         this.live = live;
     }
 
+    /** 유튜브 자동 수집용 */
+    public static Stream fromYouTube(String videoId, String title, String channel, String thumbnail) {
+        Stream s = new Stream(title, "https://www.youtube.com/watch?v=" + videoId, channel, true);
+        s.videoId = videoId;
+        s.thumbnail = thumbnail;
+        s.source = Source.YOUTUBE;
+        return s;
+    }
+
     public Long getId() { return id; }
     public String getTitle() { return title; }
     public String getUrl() { return url; }
     public String getChannel() { return channel; }
+    public String getVideoId() { return videoId; }
+    public String getThumbnail() { return thumbnail; }
+    public Source getSource() { return source; }
     public boolean isLive() { return live; }
     public Instant getCreatedAt() { return createdAt; }
 
     public void setLive(boolean live) { this.live = live; }
+
+    /** 자동 수집 갱신 — 제목·채널·썸네일 최신화 후 라이브 표시 */
+    public void refreshFromYouTube(String title, String channel, String thumbnail) {
+        this.title = title;
+        this.channel = channel;
+        this.thumbnail = thumbnail;
+        this.live = true;
+    }
 }

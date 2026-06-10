@@ -7,6 +7,8 @@ services:
       RALLY_ADMIN_USER: ${RALLY_ADMIN_USER:-admin}
       RALLY_ADMIN_PASS: ${RALLY_ADMIN_PASS:?RALLY_ADMIN_PASS를 .env에 설정하세요}
       RALLY_TOKEN_SECRET: ${RALLY_TOKEN_SECRET:?RALLY_TOKEN_SECRET을 .env에 설정하세요}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+      ITS_API_KEY: ${ITS_API_KEY:-}
     volumes:
       - rally-data:/app/data
     restart: unless-stopped

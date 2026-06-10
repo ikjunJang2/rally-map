@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { Notice, Poi, PoisResult, Post, PostCategory, SpringPage, Stream } from '../types';
+import type { CctvResponse, Notice, Poi, PoisResult, Post, PostCategory, SpringPage, Stream } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -28,6 +28,16 @@ export function useStreams() {
     queryFn: () => api('/streams'),
     refetchInterval: REFRESH_MS,
     placeholderData: [],
+  });
+}
+
+export function useCctvs() {
+  return useQuery<CctvResponse>({
+    queryKey: ['cctvs'],
+    queryFn: () => api('/cctvs'),
+    // 카메라 목록은 백엔드가 10분 캐시 — 과한 재조회 불필요
+    refetchInterval: 10 * 60_000,
+    staleTime: 5 * 60_000,
   });
 }
 

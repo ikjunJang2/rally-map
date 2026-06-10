@@ -278,6 +278,36 @@ button.poi-card:active { border-color: var(--accent); transform: scale(0.99); }
 
 a.streamcard { display: block; }
 
+/* 유튜브 자동 수집 카드 — 썸네일 레이아웃 */
+a.streamcard.yt { display: flex; gap: 13px; align-items: flex-start; }
+.yt-thumb {
+  width: 126px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--border);
+}
+.yt-body { flex: 1; min-width: 0; }
+.yt-body h3 { font-size: 0.95em; }
+
+.auto-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: 10px;
+  font-size: 0.62em; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  padding: 3px 8px; border-radius: 7px;
+}
+
+/* CCTV 인라인 플레이어 */
+.cctv-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  background: #000;
+  margin-top: 10px;
+}
+
 /* LIVE 배지 — 펄스 점 */
 .live-dot {
   display: inline-flex; align-items: center; gap: 6px;
