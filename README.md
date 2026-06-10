@@ -60,19 +60,23 @@ docker compose up -d --build
 
 → `http://서버주소` 접속. H2 데이터는 `rally-data` 볼륨에 보존됩니다.
 
-### 운영 배포 (도메인 + 자동 HTTPS)
+### 운영 배포 (EC2 + Cloudflare Tunnel)
 
-운영 도메인: **https://www.63freedom.com** (63freedom.com은 www로 리다이렉트)
+운영 도메인: **https://www.63freedom.com**
+아키텍처: 서버 IP 미노출 + 개방 포트 SSH 하나뿐 (활동가 서비스 위협 모델 대응).
 
-DNS에서 `www.63freedom.com`·`63freedom.com` A 레코드를 서버 IP로 연결한 뒤:
+전체 절차는 **[deploy/DEPLOY.md](deploy/DEPLOY.md)** 참고. 요약:
 
 ```bash
-WEB_PORT=127.0.0.1:8081 docker compose --profile prod up -d --build
+# EC2(Ubuntu)에 SSH 후
+git clone <repo> && cd rally-map
+bash deploy/setup.sh   # Docker 설치 + 시크릿 서버 자동생성 + Cloudflare Tunnel 기동
 ```
 
-Caddy가 80/443을 받아 Let's Encrypt 인증서를 자동 발급·갱신합니다
-(도메인 변경 시 [deploy/Caddyfile](deploy/Caddyfile) 수정).
-`WEB_PORT=127.0.0.1:8081`은 프론트 컨테이너가 공개 80포트를 점유하지 않게 하는 설정입니다.
+`docker-compose.prod.yml`은 backend·frontend·cloudflared 3개 컨테이너를 띄우고,
+cloudflared가 아웃바운드 터널로만 Cloudflare 엣지에 연결됩니다(공개 포트 0개).
+직접 노출 방식(Caddy+Let's Encrypt)이 필요하면 [deploy/Caddyfile](deploy/Caddyfile)과
+`docker compose --profile prod`도 그대로 사용 가능합니다.
 
 ## API
 

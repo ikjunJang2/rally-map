@@ -1,0 +1,56 @@
+# 운영 배포 — Cloudflare Tunnel 아키텍처
+# 외부 개방 포트 0개: cloudflared가 아웃바운드 터널로만 연결, EC2 IP 미노출.
+# 실행: docker compose -f docker-compose.prod.yml up -d --build
+#
+# 필요한 .env 값: RALLY_ADMIN_USER, RALLY_ADMIN_PASS, RALLY_TOKEN_SECRET,
+#                 DB_PASSWORD, TUNNEL_TOKEN, (선택) YOUTUBE_API_KEY, ITS_API_KEY, LAW_OC
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  backend:
+    build: ./backend
+    container_name: rally-backend
+    logging: *default-logging
+    environment:
+      RALLY_ADMIN_USER: ${RALLY_ADMIN_USER:?RALLY_ADMIN_USER 필요}
+      RALLY_ADMIN_PASS: ${RALLY_ADMIN_PASS:?RALLY_ADMIN_PASS 필요}
+      RALLY_TOKEN_SECRET: ${RALLY_TOKEN_SECRET:?RALLY_TOKEN_SECRET 필요}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD 필요}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+      ITS_API_KEY: ${ITS_API_KEY:-}
+      LAW_OC: ${LAW_OC:-}
+    volumes:
+      - rally-data:/app/data
+    restart: unless-stopped
+    networks: [rally]
+
+  frontend:
+    build: ./frontend
+    container_name: rally-frontend
+    logging: *default-logging
+    # 공개 포트 없음 — cloudflared가 내부 네트워크(frontend:80)로만 접근
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks: [rally]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: rally-tunnel
+    logging: *default-logging
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:?TUNNEL_TOKEN 필요}
+    depends_on:
+      - frontend
+    restart: unless-stopped
+    networks: [rally]
+
+volumes:
+  rally-data:
+
+networks:
+  rally:
