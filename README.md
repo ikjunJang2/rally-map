@@ -111,7 +111,7 @@ Caddy가 80/443을 받아 Let's Encrypt 인증서를 자동 발급·갱신합니
 `CONTACT_EMAIL` — **도메인 등록 후 실제 수신 가능한 메일로 설정할 것**.
 
 **개인정보 제로 인프라**: nginx `access_log off`(방문 IP 미기록), X-Real-IP 미전달,
-Docker 로그 10MB×3 회전, 종료 유튜브 방송 48시간 후 자동 삭제(YouTube API 30일 제한 준수).
+Docker 로그 10MB×3 회전, 종료 유튜브 방송 10분 후 자동 삭제(목록 정돈 + YouTube API 30일 제한 준수).
 | POST | `/api/auth/login` | 관리자 로그인 → 토큰 발급 (12시간) |
 
 **관리자 API** — `Authorization: Bearer {토큰}` 필수

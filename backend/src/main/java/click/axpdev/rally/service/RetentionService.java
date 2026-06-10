@@ -27,7 +27,8 @@ import java.util.List;
 public class RetentionService {
 
     private static final Logger log = LoggerFactory.getLogger(RetentionService.class);
-    private static final Duration ENDED_STREAM_TTL = Duration.ofHours(48);
+    // 종료된 방송은 바로 치우되, 일시 끊김을 종료로 오판한 경우를 거르는 10분 유예
+    private static final Duration ENDED_STREAM_TTL = Duration.ofMinutes(10);
 
     private final PostRepository posts;
     private final CommentRepository comments;
@@ -70,8 +71,8 @@ public class RetentionService {
         }
     }
 
-    /** 매시간 — 종료된 유튜브 방송 정리 (API 데이터 저장 제한 준수) */
-    @Scheduled(fixedDelayString = "3600000", initialDelay = 120_000)
+    /** 5분마다 — 종료된 유튜브 방송 정리 (목록 정돈 + API 저장 제한 준수) */
+    @Scheduled(fixedDelayString = "300000", initialDelay = 120_000)
     @Transactional
     public void purgeEndedStreams() {
         Instant cutoff = Instant.now().minus(ENDED_STREAM_TTL);
@@ -83,7 +84,7 @@ public class RetentionService {
                 .toList();
         if (!ended.isEmpty()) {
             streams.deleteAll(ended);
-            log.info("종료 48시간 경과 유튜브 방송 {}건 삭제 (API 정책 준수)", ended.size());
+            log.info("종료 10분 경과 유튜브 방송 {}건 삭제", ended.size());
         }
     }
 }
