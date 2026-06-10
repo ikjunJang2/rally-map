@@ -24,8 +24,27 @@ services:
     restart: unless-stopped
     networks: [rally]
 
+  # 운영 전용 — HTTPS 종단. 실행: WEB_PORT=127.0.0.1:8081 docker compose --profile prod up -d
+  caddy:
+    image: caddy:2-alpine
+    container_name: rally-caddy
+    profiles: [prod]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+    restart: unless-stopped
+    networks: [rally]
+
 volumes:
   rally-data:
+  caddy-data:
+  caddy-config:
 
 networks:
   rally:

@@ -60,6 +60,18 @@ docker compose up -d --build
 
 → `http://서버주소` 접속. H2 데이터는 `rally-data` 볼륨에 보존됩니다.
 
+### 운영 배포 (도메인 + 자동 HTTPS)
+
+DNS에서 `free.axpdev.click` A 레코드를 서버 IP로 연결한 뒤:
+
+```bash
+WEB_PORT=127.0.0.1:8081 docker compose --profile prod up -d --build
+```
+
+Caddy가 80/443을 받아 Let's Encrypt 인증서를 자동 발급·갱신합니다
+(도메인 변경 시 [deploy/Caddyfile](deploy/Caddyfile) 수정).
+`WEB_PORT=127.0.0.1:8081`은 프론트 컨테이너가 공개 80포트를 점유하지 않게 하는 설정입니다.
+
 ## API
 
 **공개 API**
