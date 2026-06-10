@@ -225,6 +225,9 @@ main { padding: 16px 14px; }
 
 .map { height: 44vh; min-height: 280px; border-radius: 16px; z-index: 1; border: 1px solid var(--border); }
 
+/* 관리자 좌표 찍기 미니맵 */
+.pick-map { height: 200px; border-radius: 12px; border: 1px solid var(--border); z-index: 1; }
+
 /* ── 지도 시설 필터 (체크박스) ── */
 .filter-checks {
   display: grid;

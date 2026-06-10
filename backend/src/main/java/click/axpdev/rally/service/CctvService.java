@@ -23,9 +23,9 @@ public class CctvService {
 
     private static final Logger log = LoggerFactory.getLogger(CctvService.class);
 
-    // SK올림픽핸드볼경기장(37.51735, 127.12640) 중심 약 ±2km 범위
-    private static final double MIN_X = 127.100, MAX_X = 127.155;
-    private static final double MIN_Y = 37.495, MAX_Y = 37.540;
+    // SK올림픽핸드볼경기장(37.51735, 127.12640) 중심 약 ±5km 범위
+    private static final double MIN_X = 127.069, MAX_X = 127.184;
+    private static final double MIN_Y = 37.472, MAX_Y = 37.562;
     private static final double CENTER_LAT = 37.51735, CENTER_LNG = 127.12640;
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
 

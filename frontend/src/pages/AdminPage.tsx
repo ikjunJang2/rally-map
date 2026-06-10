@@ -2,11 +2,26 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useAdminPois, useAdminDeletedPosts, useAdminReports, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
 import { REPORT_REASONS } from './CommunityPage';
-import { TYPE_INFO } from '../data/fallbackPois';
+import { TYPE_INFO, CENTER } from '../data/fallbackPois';
 import Skeleton from '../components/Skeleton';
 import type { Poi, PoiType } from '../types';
+
+/** 지도 클릭 → 좌표 콜백. CircleMarker로 선택 위치 표시 (아이콘 에셋 불필요) */
+function LocationPicker({ lat, lng, onPick }: {
+  lat: number | null;
+  lng: number | null;
+  onPick: (lat: number, lng: number) => void;
+}) {
+  useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) });
+  return lat != null && lng != null
+    ? <CircleMarker center={[lat, lng]} radius={9}
+        pathOptions={{ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.9, weight: 2 }} />
+    : null;
+}
 
 function LoginForm() {
   const { login } = useAuth();
@@ -51,13 +66,19 @@ interface PoiFormState {
 
 const EMPTY_POI: PoiFormState = { type: 'TOILET', name: '', lat: '', lng: '', memo: '', active: true };
 
-function PoiForm({ form, set, submit, busy, onCancel }: {
+function PoiForm({ form, set, onPick, submit, busy, onCancel }: {
   form: PoiFormState;
   set: (k: keyof PoiFormState) => (e: { target: { value: string } }) => void;
+  onPick: (lat: number, lng: number) => void;
   submit: (e: FormEvent) => void;
   busy: boolean;
   onCancel: () => void;
 }) {
+  const latNum = parseFloat(form.lat);
+  const lngNum = parseFloat(form.lng);
+  const valid = !Number.isNaN(latNum) && !Number.isNaN(lngNum);
+  const center: [number, number] = valid ? [latNum, lngNum] : CENTER;
+
   return (
     <form className="post-form" onSubmit={submit}>
       <label className="field-label">
@@ -68,9 +89,19 @@ function PoiForm({ form, set, submit, busy, onCancel }: {
         </select>
       </label>
       <input required placeholder="이름" value={form.name} onChange={set('name')} />
+      {/* 지도 클릭으로 좌표 자동 입력 */}
+      <MapContainer center={center} zoom={16} className="pick-map" scrollWheelZoom>
+        <TileLayer
+          attribution='&copy; Esri'
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          maxZoom={19}
+        />
+        <LocationPicker lat={valid ? latNum : null} lng={valid ? lngNum : null} onPick={onPick} />
+      </MapContainer>
+      <p className="meta" style={{ margin: '-4px 0 4px' }}>📍 지도를 클릭하면 위도·경도가 자동으로 채워져요.</p>
       <div className="form-row">
-        <input required type="number" step="any" placeholder="위도" value={form.lat} onChange={set('lat')} />
-        <input required type="number" step="any" placeholder="경도" value={form.lng} onChange={set('lng')} />
+        <input required type="number" step="any" placeholder="위도(Y)" value={form.lat} onChange={set('lat')} />
+        <input required type="number" step="any" placeholder="경도(X)" value={form.lng} onChange={set('lng')} />
       </div>
       <input placeholder="메모" value={form.memo} onChange={set('memo')} />
       <div className="form-row">
@@ -96,6 +127,9 @@ function PoiManager() {
   };
   const set = (k: keyof PoiFormState) =>
     (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  // 지도 클릭 시 위도·경도 자동 입력 (소수점 6자리)
+  const pick = (la: number, ln: number) =>
+    setForm((f) => ({ ...f, lat: la.toFixed(6), lng: ln.toFixed(6) }));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -142,13 +176,13 @@ function PoiManager() {
             </button>
           </p>
           {editing === p.id && (
-            <PoiForm form={form} set={set} submit={submit} busy={mutate.isPending} onCancel={() => setEditing(null)} />
+            <PoiForm form={form} set={set} onPick={pick} submit={submit} busy={mutate.isPending} onCancel={() => setEditing(null)} />
           )}
         </div>
       ))}
       {editing === 'new' && (
         <div className="card">
-          <PoiForm form={form} set={set} submit={submit} busy={mutate.isPending} onCancel={() => setEditing(null)} />
+          <PoiForm form={form} set={set} onPick={pick} submit={submit} busy={mutate.isPending} onCancel={() => setEditing(null)} />
         </div>
       )}
     </div>

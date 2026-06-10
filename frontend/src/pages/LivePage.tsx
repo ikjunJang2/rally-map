@@ -82,7 +82,7 @@ function CctvSection() {
   if (data.cameras.length === 0) {
     return (
       <div className="card">
-        <p className="meta">주변 2km 안에서 공개된 실시간 CCTV를 찾지 못했어요.
+        <p className="meta">주변 5km 안에서 공개된 실시간 CCTV를 찾지 못했어요.
           교통 CCTV는 주요 간선도로 위주로 설치돼 있어요.</p>
       </div>
     );
