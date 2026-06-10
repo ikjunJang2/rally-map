@@ -83,6 +83,15 @@ body.dark { background: #07080c; }
   border-radius: 7px; padding: 3px 8px;
   white-space: nowrap;
 }
+.app-header .presence {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.66em; font-weight: 800;
+  color: #1d7d46;
+  background: color-mix(in srgb, #1d7d46 12%, transparent);
+  border-radius: 7px; padding: 3px 8px;
+  white-space: nowrap;
+}
+body.dark .app-header .presence { color: #6fd49a; }
 .toggles { display: flex; align-items: center; gap: 6px; }
 .toggles button, .toggles .admin-link {
   /* 44×44px 최소 터치 타깃 (WCAG 2.5.5) */
@@ -449,6 +458,34 @@ button.primary:active { transform: scale(0.99); }
 button.primary:disabled { opacity: 0.5; }
 button.primary.danger { background: var(--danger); }
 button.primary.wide { display: flex; width: 100%; margin: 10px 0; }
+
+/* 세그먼트 탭 (라이브 | CCTV) */
+.seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  margin: 4px 0 14px;
+}
+.seg button {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 11px;
+  min-height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.seg button.on {
+  background: var(--accent);
+  color: #fff;
+}
 
 button.ghost {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;

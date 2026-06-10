@@ -112,7 +112,7 @@ function CctvSection() {
 
 const PAGE_SIZE = 5;
 
-export default function LivePage() {
+function LiveSection() {
   const { data: streams = [] } = useStreams();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -125,22 +125,13 @@ export default function LivePage() {
 
   const shown = sorted.slice(0, visibleCount);
   const remaining = sorted.length - visibleCount;
-  const auto = streams.some((s) => s.source === 'YOUTUBE');
 
   return (
-    <section aria-label="현장 라이브와 CCTV">
-      <h2 className="tab-title">
-        <Tv size={20} className="ic accent" aria-hidden="true" />현장 라이브
-        {auto && (
-          <span className="auto-badge"><RefreshCw size={11} aria-hidden="true" /> 1분마다 자동 갱신</span>
-        )}
-      </h2>
-
+    <>
       {streams.length === 0 && (
         <div className="card">
           <p className="meta">
-            지금 진행 중인 라이브를 찾지 못했어요. 잠시 후 자동으로 다시 확인하고,
-            아래 버튼으로 유튜브에서 직접 찾아볼 수도 있어요.
+            지금 진행 중인 라이브를 찾지 못했어요. 1분마다 자동으로 다시 확인해요.
           </p>
         </div>
       )}
@@ -150,11 +141,36 @@ export default function LivePage() {
           <ChevronDown size={17} aria-hidden="true" /> 더보기 ({remaining}개)
         </button>
       )}
+    </>
+  );
+}
 
-      <h2 className="tab-title" style={{ marginTop: 24 }}>
-        <Cctv size={20} className="ic accent" aria-hidden="true" />경기장 주변 CCTV
+export default function LivePage() {
+  const [tab, setTab] = useState<'live' | 'cctv'>('live');
+  const { data: streams = [] } = useStreams();
+  const auto = streams.some((s) => s.source === 'YOUTUBE');
+
+  return (
+    <section aria-label="현장 라이브와 CCTV">
+      <h2 className="tab-title">
+        <Tv size={20} className="ic accent" aria-hidden="true" />현장
+        {tab === 'live' && auto && (
+          <span className="auto-badge"><RefreshCw size={11} aria-hidden="true" /> 1분마다 자동 갱신</span>
+        )}
       </h2>
-      <CctvSection />
+
+      <div className="seg" role="tablist" aria-label="현장 정보 종류">
+        <button role="tab" aria-selected={tab === 'live'} className={tab === 'live' ? 'on' : ''}
+                onClick={() => setTab('live')}>
+          <Tv size={16} aria-hidden="true" /> 라이브
+        </button>
+        <button role="tab" aria-selected={tab === 'cctv'} className={tab === 'cctv' ? 'on' : ''}
+                onClick={() => setTab('cctv')}>
+          <Cctv size={16} aria-hidden="true" /> CCTV
+        </button>
+      </div>
+
+      {tab === 'live' ? <LiveSection /> : <CctvSection />}
     </section>
   );
 }

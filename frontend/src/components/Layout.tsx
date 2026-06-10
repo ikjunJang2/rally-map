@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import {
   Landmark, Moon, Sun, ALargeSmall, Settings,
   Map, Tv, MessagesSquare, Phone, BookOpen,
-  WifiOff, PlugZap, type LucideIcon,
+  WifiOff, PlugZap, Users, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { usePois, useNotices } from '../hooks/useApi';
+import { usePois, useNotices, usePresence } from '../hooks/useApi';
 import NoticeBoard from './NoticeBoard';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -68,6 +68,7 @@ export default function Layout() {
   const { isAdmin } = useAuth();
   const { dark, toggleBig, toggleDark } = useTheme();
   const { data: notices } = useNotices();
+  const { data: presence } = usePresence();
   const { pathname } = useLocation();
 
   // 페이지 이동 시 스크롤 맨 위로
@@ -84,6 +85,12 @@ export default function Layout() {
           <Landmark size={22} className="logo" aria-hidden="true" />
           주권자의 광장
           <span className="venue">핸드볼경기장</span>
+          {presence && presence.count > 0 && (
+            <span className="presence" aria-label={`현재 ${presence.count}명 접속 중`}>
+              <Users size={13} aria-hidden="true" />
+              {presence.count.toLocaleString('ko-KR')}
+            </span>
+          )}
         </h1>
         <div className="toggles">
           <button onClick={toggleBig} aria-label="글자 크기 바꾸기">

@@ -31,6 +31,25 @@ export function useStreams() {
   });
 }
 
+function presenceSid(): string {
+  let sid = sessionStorage.getItem('rally-sid');
+  if (!sid) {
+    sid = crypto.randomUUID();
+    sessionStorage.setItem('rally-sid', sid);
+  }
+  return sid;
+}
+
+/** 익명 동시 접속자 수 — 30초마다 핑하면서 현재 인원을 받아옴 */
+export function usePresence() {
+  return useQuery<{ count: number }>({
+    queryKey: ['presence'],
+    queryFn: () => api('/presence', { method: 'POST', body: { sid: presenceSid() } }),
+    refetchInterval: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useCctvs() {
   return useQuery<CctvResponse>({
     queryKey: ['cctvs'],
