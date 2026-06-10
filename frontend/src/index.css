@@ -276,7 +276,11 @@ button.poi-card {
 button.poi-card:active { border-color: var(--accent); transform: scale(0.99); }
 .poi-ic { display: inline-flex; margin-right: 7px; }
 
-a.streamcard { display: block; }
+a.streamcard {
+  display: block;
+  text-decoration: none; /* 카드 전체가 링크 — 밑줄 제거, 본문 색 유지 */
+  color: var(--text);
+}
 
 /* 유튜브 자동 수집 카드 — 썸네일 레이아웃 */
 a.streamcard.yt { display: flex; gap: 13px; align-items: flex-start; }
@@ -445,6 +449,21 @@ button.primary:active { transform: scale(0.99); }
 button.primary:disabled { opacity: 0.5; }
 button.primary.danger { background: var(--danger); }
 button.primary.wide { display: flex; width: 100%; margin: 10px 0; }
+
+button.ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 13px;
+  min-height: 48px;
+  border-radius: 13px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+button.ghost.wide { display: flex; width: 100%; margin: 10px 0; }
+button.ghost:active { border-color: var(--accent); }
 
 button.linklike {
   border: none; background: none; color: var(--accent);

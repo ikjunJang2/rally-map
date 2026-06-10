@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Tv, Radio, Play, Cctv, ExternalLink, SearchIcon, MapPin, RefreshCw, Eye } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Tv, Radio, Play, Cctv, ExternalLink, SearchIcon, MapPin, RefreshCw, Eye, ChevronDown } from 'lucide-react';
 import { useStreams, useCctvs } from '../hooks/useApi';
 import CctvPlayer from '../components/CctvPlayer';
 import type { Stream } from '../types';
@@ -29,7 +29,8 @@ function formatViewers(n: number): string {
 
 function StreamCard({ s }: { s: Stream }) {
   return (
-    <a className="card streamcard yt" href={s.url} target="_blank" rel="noreferrer">
+    <a className="card streamcard yt" href={s.url} target="_blank" rel="noreferrer"
+       aria-label={`${s.title} — 유튜브에서 보기`}>
       {s.thumbnail && (
         <img className="yt-thumb" src={s.thumbnail} alt="" loading="lazy" />
       )}
@@ -53,7 +54,6 @@ function StreamCard({ s }: { s: Stream }) {
             )}
           </p>
         )}
-        <span className="navlink"><Play size={15} aria-hidden="true" /> 유튜브에서 보기</span>
       </div>
     </a>
   );
@@ -120,15 +120,28 @@ function CctvSection() {
   );
 }
 
+const PAGE_SIZE = 5;
+
 export default function LivePage() {
   const { data: streams = [] } = useStreams();
-  const auto = streams.filter((s) => s.source === 'YOUTUBE');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // 라이브 우선 → 시청자수 많은 순 (시청자수 비공개는 뒤로)
+  const sorted = useMemo(() =>
+    [...streams].sort((a, b) => {
+      if (a.live !== b.live) return a.live ? -1 : 1;
+      return (b.viewers ?? -1) - (a.viewers ?? -1);
+    }), [streams]);
+
+  const shown = sorted.slice(0, visibleCount);
+  const remaining = sorted.length - visibleCount;
+  const auto = streams.some((s) => s.source === 'YOUTUBE');
 
   return (
     <section aria-label="현장 라이브와 CCTV">
       <h2 className="tab-title">
         <Tv size={20} className="ic accent" aria-hidden="true" />현장 라이브
-        {auto.length > 0 && (
+        {auto && (
           <span className="auto-badge"><RefreshCw size={11} aria-hidden="true" /> 1분마다 자동 갱신</span>
         )}
       </h2>
@@ -141,7 +154,12 @@ export default function LivePage() {
           </p>
         </div>
       )}
-      {streams.map((s) => <StreamCard key={s.id} s={s} />)}
+      {shown.map((s) => <StreamCard key={s.id} s={s} />)}
+      {remaining > 0 && (
+        <button className="ghost wide" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
+          <ChevronDown size={17} aria-hidden="true" /> 더보기 ({remaining}개)
+        </button>
+      )}
 
       <h2 className="tab-title" style={{ marginTop: 24 }}>
         <SearchIcon size={20} className="ic accent" aria-hidden="true" />유튜브 라이브 직접 검색
