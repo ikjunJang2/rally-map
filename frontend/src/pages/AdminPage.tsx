@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift, KeyRound, UserCog } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { api } from '../api/client';
 import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAdminPois, useAdminDeletedPosts, useAdminReports, useAdminShare, useAdminSettings, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
@@ -455,9 +456,25 @@ function ShareManager() {
 /** 외부 연동 키 등록 — 저장하면 서버 재배포 없이 즉시 적용 */
 function SettingsManager() {
   const { data: settings = [], isLoading } = useAdminSettings();
+  const { token } = useAuth();
   const toast = useToast();
   const mutate = useAdminMutation(['admin-settings']);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [testing, setTesting] = useState<string | null>(null);
+  const [results, setResults] = useState<Record<string, { ok: boolean; message: string }>>({});
+
+  const runTest = async (key: string) => {
+    setTesting(key);
+    setResults((r) => { const n = { ...r }; delete n[key]; return n; });
+    try {
+      const r = await api<{ ok: boolean; message: string }>('/admin/settings/test', { method: 'POST', body: { key }, token });
+      setResults((p) => ({ ...p, [key]: r }));
+    } catch {
+      setResults((p) => ({ ...p, [key]: { ok: false, message: '테스트 요청에 실패했어요' } }));
+    } finally {
+      setTesting(null);
+    }
+  };
 
   const LINKS: Record<string, { url: string; label: string }> = {
     'law.oc': { url: 'https://open.law.go.kr', label: 'open.law.go.kr' },
@@ -497,6 +514,18 @@ function SettingsManager() {
                     disabled={mutate.isPending || (s.secret && !(drafts[s.key] ?? '').trim())}
                     onClick={() => save(s.key, valueOf(s.key, s.value))}>저장</button>
           </div>
+          <div className="form-row" style={{ marginTop: 6 }}>
+            <button type="button" className="ghost" disabled={!s.set || testing === s.key}
+                    onClick={() => runTest(s.key)}>
+              {testing === s.key ? '테스트 중…' : '키 테스트'}
+            </button>
+          </div>
+          {results[s.key] && (
+            <p className={results[s.key].ok ? 'meta' : 'form-error'} role="status"
+               style={results[s.key].ok ? { margin: '4px 0 0', color: '#16a34a' } : { margin: '4px 0 0' }}>
+              {results[s.key].ok ? '✓ ' : '✗ '}{results[s.key].message}
+            </p>
+          )}
           {LINKS[s.key] && (
             <p className="notice" style={{ margin: '4px 0 0' }}>
               <a href={LINKS[s.key].url} target="_blank" rel="noreferrer">{LINKS[s.key].label}</a>
