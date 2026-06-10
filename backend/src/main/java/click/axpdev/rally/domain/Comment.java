@@ -33,6 +33,15 @@ public class Comment {
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    /* 소프트 삭제 — 화면에서만 숨기고 DB에는 이력으로 영구 보존 */
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    private Instant deletedAt;
+
+    @Enumerated(EnumType.STRING)
+    private DeletedBy deletedBy;
+
     protected Comment() {}
 
     public Comment(Long postId, String nickname, String pinHash, String body) {
@@ -48,4 +57,13 @@ public class Comment {
     public String getPinHash() { return pinHash; }
     public String getBody() { return body; }
     public Instant getCreatedAt() { return createdAt; }
+    public boolean isDeleted() { return deleted; }
+    public Instant getDeletedAt() { return deletedAt; }
+    public DeletedBy getDeletedBy() { return deletedBy; }
+
+    public void markDeleted(DeletedBy by) {
+        this.deleted = true;
+        this.deletedAt = Instant.now();
+        this.deletedBy = by;
+    }
 }

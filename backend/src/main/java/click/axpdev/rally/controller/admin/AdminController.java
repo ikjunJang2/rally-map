@@ -113,19 +113,32 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── 커뮤니티 (관리자 삭제) ─────────────────────────
+    // ── 커뮤니티 (관리자 소프트 삭제 — DB에는 이력 보존) ──
     @DeleteMapping("/posts/{id}")
     @Transactional
     public ResponseEntity<Void> deletePost(@PathVariable Long id) {
-        comments.deleteByPostId(id);
-        likes.deleteByPostId(id);
-        posts.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return posts.findById(id)
+                .map(p -> {
+                    p.markDeleted(DeletedBy.ADMIN);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/comments/{id}")
+    @Transactional
     public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
-        comments.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return comments.findById(id)
+                .map(c -> {
+                    c.markDeleted(DeletedBy.ADMIN);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** 삭제 이력 감사 — 내용·삭제 시각·삭제 주체 포함 */
+    @GetMapping("/posts/deleted")
+    public List<Post> deletedPosts() {
+        return posts.findByDeletedTrueOrderByDeletedAtDesc();
     }
 }

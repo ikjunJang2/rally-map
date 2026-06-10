@@ -59,6 +59,10 @@ export interface Post {
   hearts: number;
   comments: number;
   createdAt: string;
+  /* 소프트 삭제 이력 — 관리자 감사 조회에서만 의미 있음 */
+  deleted: boolean;
+  deletedAt: string | null;
+  deletedBy: 'AUTHOR' | 'ADMIN' | null;
 }
 
 export interface Comment {

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv } from 'lucide-react';
+import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { useAdminPois, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
+import { useAdminPois, useAdminDeletedPosts, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
 import { TYPE_INFO } from '../data/fallbackPois';
 import Skeleton from '../components/Skeleton';
 import type { Poi, PoiType } from '../types';
@@ -245,10 +245,43 @@ function StreamManager() {
   );
 }
 
+function DeletedHistory() {
+  const { data: deleted = [], isLoading } = useAdminDeletedPosts();
+
+  if (isLoading) return <Skeleton lines={3} />;
+  if (deleted.length === 0) {
+    return <div className="card"><p className="meta">삭제된 글이 없어요.</p></div>;
+  }
+
+  return (
+    <div>
+      <p className="notice" style={{ marginTop: 0 }}>
+        삭제된 글도 DB에 이력으로 영구 보존됩니다 — 분쟁·신고 대응 근거 자료.
+      </p>
+      {deleted.map((p) => (
+        <div key={p.id} className="card inactive">
+          <h3>
+            <span className={`badge ${p.deletedBy === 'ADMIN' ? 'hot' : ''}`}>
+              {p.deletedBy === 'ADMIN' ? '관리자 삭제' : '작성자 삭제'}
+            </span>
+            {p.title}
+          </h3>
+          {p.body && <p className="meta post-body">{p.body}</p>}
+          <p className="meta">
+            {p.nickname} · 작성 {new Date(p.createdAt).toLocaleString('ko-KR')}
+            {p.deletedAt && <> · 삭제 {new Date(p.deletedAt).toLocaleString('ko-KR')}</>}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] = [
   { id: 'poi', label: '시설', icon: <MapIcon size={15} aria-hidden="true" />, el: <PoiManager /> },
   { id: 'notice', label: '공지', icon: <Megaphone size={15} aria-hidden="true" />, el: <NoticeManager /> },
   { id: 'stream', label: '라이브', icon: <Tv size={15} aria-hidden="true" />, el: <StreamManager /> },
+  { id: 'deleted', label: '삭제 이력', icon: <Trash2 size={15} aria-hidden="true" />, el: <DeletedHistory /> },
 ];
 
 export default function AdminPage() {

@@ -49,9 +49,18 @@ public class Post {
     @Formula("(select count(*) from post_like pl where pl.post_id = id)")
     private long hearts;
 
-    /** 댓글 수 — post_comment 집계 (읽기 전용) */
-    @Formula("(select count(*) from post_comment pc where pc.post_id = id)")
+    /** 댓글 수 — 삭제되지 않은 댓글만 집계 (읽기 전용) */
+    @Formula("(select count(*) from post_comment pc where pc.post_id = id and pc.deleted = false)")
     private long comments;
+
+    /* 소프트 삭제 — 화면에서만 숨기고 DB에는 이력으로 영구 보존 */
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    private Instant deletedAt;
+
+    @Enumerated(EnumType.STRING)
+    private DeletedBy deletedBy;
 
     protected Post() {}
 
@@ -72,4 +81,13 @@ public class Post {
     public Instant getCreatedAt() { return createdAt; }
     public long getHearts() { return hearts; }
     public long getComments() { return comments; }
+    public boolean isDeleted() { return deleted; }
+    public Instant getDeletedAt() { return deletedAt; }
+    public DeletedBy getDeletedBy() { return deletedBy; }
+
+    public void markDeleted(DeletedBy by) {
+        this.deleted = true;
+        this.deletedAt = Instant.now();
+        this.deletedBy = by;
+    }
 }

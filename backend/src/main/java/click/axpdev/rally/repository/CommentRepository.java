@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.List;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
-    List<Comment> findByPostIdOrderByCreatedAtAsc(Long postId);
-    boolean existsByPostIdAndBodyAndCreatedAtAfter(Long postId, String body, Instant after);
-    void deleteByPostId(Long postId);
+    // 공개 목록은 항상 삭제되지 않은 댓글만
+    List<Comment> findByPostIdAndDeletedFalseOrderByCreatedAtAsc(Long postId);
+    boolean existsByPostIdAndBodyAndDeletedFalseAndCreatedAtAfter(Long postId, String body, Instant after);
 }

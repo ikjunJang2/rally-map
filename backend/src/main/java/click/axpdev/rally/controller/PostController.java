@@ -1,6 +1,7 @@
 package click.axpdev.rally.controller;
 
 import click.axpdev.rally.domain.Comment;
+import click.axpdev.rally.domain.DeletedBy;
 import click.axpdev.rally.domain.Post;
 import click.axpdev.rally.domain.PostLike;
 import click.axpdev.rally.repository.CommentRepository;
@@ -59,8 +60,8 @@ public class PostController {
                            @RequestParam(defaultValue = "0") int page) {
         PageRequest pr = PageRequest.of(Math.max(0, page), PAGE_SIZE);
         return category == null
-                ? posts.findAllByOrderByCreatedAtDesc(pr)
-                : posts.findByCategoryOrderByCreatedAtDesc(category, pr);
+                ? posts.findByDeletedFalseOrderByCreatedAtDesc(pr)
+                : posts.findByCategoryAndDeletedFalseOrderByCreatedAtDesc(category, pr);
     }
 
     /** 인기글 TOP 3 — 하트 1개 이상, 하트순 */
@@ -89,7 +90,7 @@ public class PostController {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", "잠시 후 다시 작성해주세요 (글은 1분에 1건, 1시간에 10건)"));
         }
-        if (posts.existsByTitleAndCreatedAtAfter(req.title().strip(), Instant.now().minus(DUPLICATE_WINDOW))) {
+        if (posts.existsByTitleAndDeletedFalseAndCreatedAtAfter(req.title().strip(), Instant.now().minus(DUPLICATE_WINDOW))) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "같은 제목의 글이 방금 등록됐어요"));
         }
@@ -101,19 +102,18 @@ public class PostController {
 
     public record DeleteRequest(@NotBlank String pin) {}
 
-    /** 작성자 본인 삭제 — 작성 시 입력한 PIN 필요 (댓글·하트도 함께 정리) */
+    /** 작성자 본인 삭제 — 화면에서만 숨김, DB에는 이력으로 보존 (소프트 삭제) */
     @PostMapping("/{id}/delete")
     @Transactional
     public ResponseEntity<Void> deleteByAuthor(@PathVariable Long id,
                                                @Valid @RequestBody DeleteRequest req) {
         return posts.findById(id)
+                .filter(p -> !p.isDeleted())
                 .map(p -> {
                     if (!pinMatches(p.getPinHash(), req.pin())) {
                         return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
                     }
-                    comments.deleteByPostId(id);
-                    likes.deleteByPostId(id);
-                    posts.delete(p);
+                    p.markDeleted(DeletedBy.AUTHOR);
                     return ResponseEntity.noContent().<Void>build();
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -145,7 +145,7 @@ public class PostController {
 
     @GetMapping("/{id}/comments")
     public List<Comment> listComments(@PathVariable Long id) {
-        return comments.findByPostIdOrderByCreatedAtAsc(id);
+        return comments.findByPostIdAndDeletedFalseOrderByCreatedAtAsc(id);
     }
 
     public record CommentRequest(
@@ -166,7 +166,7 @@ public class PostController {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", "잠시 후 다시 작성해주세요 (댓글은 1분에 3건)"));
         }
-        if (comments.existsByPostIdAndBodyAndCreatedAtAfter(id, req.body().strip(),
+        if (comments.existsByPostIdAndBodyAndDeletedFalseAndCreatedAtAfter(id, req.body().strip(),
                 Instant.now().minus(Duration.ofMinutes(1)))) {
             return ResponseEntity.badRequest().body(Map.of("error", "같은 댓글이 방금 등록됐어요"));
         }
@@ -174,16 +174,18 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    /** 댓글 작성자 본인 삭제 */
+    /** 댓글 작성자 본인 삭제 — 소프트 삭제 */
     @PostMapping("/comments/{commentId}/delete")
+    @Transactional
     public ResponseEntity<Void> deleteCommentByAuthor(@PathVariable Long commentId,
                                                       @Valid @RequestBody DeleteRequest req) {
         return comments.findById(commentId)
+                .filter(c -> !c.isDeleted())
                 .map(c -> {
                     if (!pinMatches(c.getPinHash(), req.pin())) {
                         return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
                     }
-                    comments.delete(c);
+                    c.markDeleted(DeletedBy.AUTHOR);
                     return ResponseEntity.noContent().<Void>build();
                 })
                 .orElse(ResponseEntity.notFound().build());

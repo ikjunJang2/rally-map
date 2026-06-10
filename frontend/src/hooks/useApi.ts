@@ -175,6 +175,16 @@ export function useAdminMutation(invalidateKeys: string[]) {
   });
 }
 
+/** 관리자용 삭제 이력 감사 */
+export function useAdminDeletedPosts() {
+  const { token, isAdmin } = useAuth();
+  return useQuery<Post[]>({
+    queryKey: ['admin-deleted-posts'],
+    queryFn: () => api('/admin/posts/deleted', { token }),
+    enabled: isAdmin,
+  });
+}
+
 /** 관리자용 POI 전체 목록 (비활성 포함) */
 export function useAdminPois() {
   const { token, isAdmin } = useAuth();

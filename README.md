@@ -95,6 +95,10 @@ Caddy가 80/443을 받아 Let's Encrypt 인증서를 자동 발급·갱신합니
 동일 제목 10분 내 재등록 차단 · 금칙어(욕설·위협·스팸) 자동 거부.
 금칙어 사전: `backend/src/main/resources/moderation-banned-words.txt`
 — 정규화(공백·특수문자·숫자 제거) 후 부분일치라 "시1발" 류 우회도 차단.
+
+**삭제 = 소프트 삭제**: 글·댓글은 삭제해도 DB에 내용·삭제 시각·삭제 주체(작성자/관리자)가
+이력으로 영구 보존됩니다 (분쟁·신고 대응 근거). 공개 API에는 절대 노출되지 않으며,
+관리자만 `GET /api/admin/posts/deleted` 또는 관리자 화면 [삭제 이력] 탭에서 조회.
 | POST | `/api/auth/login` | 관리자 로그인 → 토큰 발급 (12시간) |
 
 **관리자 API** — `Authorization: Bearer {토큰}` 필수
