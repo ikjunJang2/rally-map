@@ -35,6 +35,33 @@ export interface Stream {
   createdAt: string;
 }
 
+export type ItemStatus = 'PLENTY' | 'LOW' | 'OUT';
+
+export interface ShareItemView {
+  id: number;
+  name: string;
+  status: ItemStatus;
+  updatedAt: string;
+}
+
+export interface ShareLocation {
+  poiId: number;
+  name: string;
+  lat: number;
+  lng: number;
+  type: PoiType;
+  items: ShareItemView[];
+}
+
+/** 관리자용 평면 품목 (poiId 포함) */
+export interface AdminShareItem {
+  id: number;
+  poiId: number;
+  name: string;
+  status: ItemStatus;
+  updatedAt: string;
+}
+
 export interface Cctv {
   name: string;
   lat: number;

@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag } from 'lucide-react';
+import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useAdminPois, useAdminDeletedPosts, useAdminReports, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
+import { useAdminPois, useAdminDeletedPosts, useAdminReports, useAdminShare, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
 import { REPORT_REASONS } from './CommunityPage';
+import { SHARE_STATUS } from './MapPage';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
 import Skeleton from '../components/Skeleton';
-import type { Poi, PoiType } from '../types';
+import type { ItemStatus, Poi, PoiType } from '../types';
 
 /** 지도 클릭 → 좌표 콜백. CircleMarker로 선택 위치 표시 (아이콘 에셋 불필요) */
 function LocationPicker({ lat, lng, onPick }: {
@@ -373,10 +374,89 @@ function DeletedHistory() {
   );
 }
 
+function ShareManager() {
+  const { data: pois = [] } = useAdminPois();
+  const { data: items = [], isLoading } = useAdminShare();
+  const toast = useToast();
+  const mutate = useAdminMutation(['share', 'admin-share']);
+  const [poiId, setPoiId] = useState<number | ''>('');
+  const [name, setName] = useState('');
+
+  if (isLoading) return <Skeleton lines={3} />;
+
+  const poiLabel = (id: number) => {
+    const p = pois.find((x) => x.id === id);
+    return p ? `${TYPE_INFO[p.type]?.label ?? p.type} ${p.name}` : `#${id}`;
+  };
+
+  const groups = new Map<number, typeof items>();
+  for (const it of items) {
+    if (!groups.has(it.poiId)) groups.set(it.poiId, []);
+    groups.get(it.poiId)!.push(it);
+  }
+
+  const add = (e: FormEvent) => {
+    e.preventDefault();
+    if (poiId === '' || !name.trim()) return;
+    mutate.mutate(
+      { path: '/admin/share', method: 'POST', body: { poiId, name: name.trim() } },
+      { onSuccess: () => { setName(''); toast('success', '품목을 추가했어요'); } });
+  };
+
+  return (
+    <div>
+      <form className="card post-form" onSubmit={add}>
+        <label className="field-label">
+          나눔처
+          <select value={poiId} onChange={(e) => setPoiId(e.target.value ? Number(e.target.value) : '')}>
+            <option value="">나눔처 선택…</option>
+            {pois.map((p) => (
+              <option key={p.id} value={p.id}>{TYPE_INFO[p.type]?.label ?? p.type} {p.name}</option>
+            ))}
+          </select>
+        </label>
+        <div className="form-row">
+          <input maxLength={40} placeholder="품목명 (예: 생수, 핫팩)" value={name}
+                 onChange={(e) => setName(e.target.value)} />
+          <button type="submit" className="primary" disabled={poiId === '' || !name.trim()}>추가</button>
+        </div>
+        <p className="notice" style={{ margin: '4px 0 0' }}>
+          나눔처가 없으면 먼저 🗺️ 시설 탭에서 나눔 위치(POI)를 추가하세요.
+        </p>
+      </form>
+
+      {items.length === 0 && (
+        <div className="card"><p className="meta">등록된 나눔 품목이 없어요.</p></div>
+      )}
+      {[...groups.entries()].map(([pid, list]) => (
+        <div key={pid} className="card">
+          <h3><Gift size={15} className="ic accent" aria-hidden="true" />{poiLabel(pid)}</h3>
+          {list.map((it) => (
+            <div key={it.id} className="share-admin-row">
+              <span className="share-admin-name">{it.name}</span>
+              <select value={it.status} onChange={(e) =>
+                mutate.mutate(
+                  { path: `/admin/share/${it.id}`, method: 'PATCH', body: { status: e.target.value } },
+                  { onSuccess: () => toast('success', '상태를 바꿨어요') })}>
+                {(Object.entries(SHARE_STATUS) as [ItemStatus, { label: string }][]).map(([k, v]) =>
+                  <option key={k} value={k}>{v.label}</option>)}
+              </select>
+              <button className="linklike admin" onClick={() =>
+                mutate.mutate({ path: `/admin/share/${it.id}`, method: 'DELETE' },
+                  { onSuccess: () => toast('success', '삭제했어요') })}>삭제</button>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] = [
   { id: 'poi', label: '시설', icon: <MapIcon size={15} aria-hidden="true" />, el: <PoiManager /> },
   { id: 'notice', label: '공지', icon: <Megaphone size={15} aria-hidden="true" />, el: <NoticeManager /> },
   { id: 'stream', label: '라이브', icon: <Tv size={15} aria-hidden="true" />, el: <StreamManager /> },
+  { id: 'share', label: '나눔', icon: <Gift size={15} aria-hidden="true" />, el: <ShareManager /> },
   { id: 'reports', label: '신고', icon: <Flag size={15} aria-hidden="true" />, el: <ReportQueue /> },
   { id: 'deleted', label: '삭제 이력', icon: <Trash2 size={15} aria-hidden="true" />, el: <DeletedHistory /> },
 ];

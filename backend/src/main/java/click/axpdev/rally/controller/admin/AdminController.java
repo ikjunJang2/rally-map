@@ -29,11 +29,12 @@ public class AdminController {
     private final CommentRepository comments;
     private final PostLikeRepository likes;
     private final ReportRepository reports;
+    private final ShareItemRepository shareItems;
 
     public AdminController(PoiRepository pois, NoticeRepository notices,
                            StreamRepository streams, PostRepository posts,
                            CommentRepository comments, PostLikeRepository likes,
-                           ReportRepository reports) {
+                           ReportRepository reports, ShareItemRepository shareItems) {
         this.pois = pois;
         this.notices = notices;
         this.streams = streams;
@@ -41,6 +42,7 @@ public class AdminController {
         this.comments = comments;
         this.likes = likes;
         this.reports = reports;
+        this.shareItems = shareItems;
     }
 
     // ── POI (비활성 포함 전체) ─────────────────────────────
@@ -70,8 +72,41 @@ public class AdminController {
     }
 
     @DeleteMapping("/pois/{id}")
+    @Transactional
     public ResponseEntity<Void> deletePoi(@PathVariable Long id) {
+        shareItems.deleteByPoiId(id); // 나눔처 삭제 시 품목도 정리
         pois.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── 나눔 품목 관리 ─────────────────────────────────────
+    @GetMapping("/share")
+    public List<ShareItem> allShareItems() {
+        return shareItems.findAllByOrderByPoiIdAscIdAsc();
+    }
+
+    public record ShareItemRequest(@NotNull Long poiId, @NotBlank @Size(max = 40) String name) {}
+
+    @PostMapping("/share")
+    public ResponseEntity<ShareItem> createShareItem(@Valid @RequestBody ShareItemRequest req) {
+        if (!pois.existsById(req.poiId())) return ResponseEntity.badRequest().build();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(shareItems.save(new ShareItem(req.poiId(), req.name().strip())));
+    }
+
+    public record StatusRequest(@NotNull ShareItem.Status status) {}
+
+    @PatchMapping("/share/{id}")
+    public ResponseEntity<ShareItem> updateShareStatus(@PathVariable Long id,
+                                                       @Valid @RequestBody StatusRequest req) {
+        return shareItems.findById(id)
+                .map(s -> { s.setStatus(req.status()); return ResponseEntity.ok(shareItems.save(s)); })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/share/{id}")
+    public ResponseEntity<Void> deleteShareItem(@PathVariable Long id) {
+        shareItems.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 

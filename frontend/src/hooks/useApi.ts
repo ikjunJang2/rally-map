@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { AdminReport, CctvResponse, Comment, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, SpringPage, Stream } from '../types';
+import type { AdminReport, AdminShareItem, CctvResponse, Comment, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -47,6 +47,26 @@ export function usePresence() {
     queryFn: () => api('/presence', { method: 'POST', body: { sid: presenceSid() } }),
     refetchInterval: 30_000,
     placeholderData: keepPreviousData,
+  });
+}
+
+/** 나눔 현황 — 나눔처별 품목·상태 (1분 갱신) */
+export function useShare() {
+  return useQuery<ShareLocation[]>({
+    queryKey: ['share'],
+    queryFn: () => api('/share'),
+    refetchInterval: 60_000,
+    placeholderData: [],
+  });
+}
+
+/** 관리자용 나눔 품목 전체 */
+export function useAdminShare() {
+  const { token, isAdmin } = useAuth();
+  return useQuery<AdminShareItem[]>({
+    queryKey: ['admin-share'],
+    queryFn: () => api('/admin/share', { token }),
+    enabled: isAdmin,
   });
 }
 

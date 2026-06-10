@@ -2,8 +2,10 @@ package click.axpdev.rally.config;
 
 import click.axpdev.rally.domain.Notice;
 import click.axpdev.rally.domain.Poi;
+import click.axpdev.rally.domain.ShareItem;
 import click.axpdev.rally.repository.NoticeRepository;
 import click.axpdev.rally.repository.PoiRepository;
+import click.axpdev.rally.repository.ShareItemRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +22,7 @@ import static click.axpdev.rally.domain.PoiType.*;
 public class DataSeeder {
 
     @Bean
-    CommandLineRunner seed(PoiRepository pois, NoticeRepository notices) {
+    CommandLineRunner seed(PoiRepository pois, NoticeRepository notices, ShareItemRepository shareItems) {
         return args -> {
             if (pois.count() == 0) {
                 pois.saveAll(List.of(
@@ -42,6 +44,17 @@ public class DataSeeder {
                     new Poi(STORE,  "세븐일레븐 뉴송파방이점", 37.51342, 127.11819, "생수·간식"),
                     new Poi(WATER,  "물·물품 나눔처", 37.51800, 127.12620, "현장 공지로 위치 갱신")
                 ));
+            }
+            // 나눔 품목 — POI 시드와 독립 (기존 DB에 배포해도 1회 등록되도록)
+            if (shareItems.count() == 0) {
+                pois.findByActiveTrue().stream()
+                    .filter(p -> p.getType() == WATER)
+                    .findFirst()
+                    .ifPresent(water -> shareItems.saveAll(List.of(
+                        new ShareItem(water.getId(), "생수"),
+                        new ShareItem(water.getId(), "핫팩"),
+                        new ShareItem(water.getId(), "우비")
+                    )));
             }
             if (notices.count() == 0) {
                 notices.save(new Notice(

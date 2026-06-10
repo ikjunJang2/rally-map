@@ -2,10 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, LayersControl, CircleMarker, Popup } from 'react-leaflet';
 import type { Map as LeafletMap, CircleMarker as LeafletCircleMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Gift } from 'lucide-react';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
-import { usePois } from '../hooks/useApi';
+import { usePois, useShare } from '../hooks/useApi';
 import Skeleton from '../components/Skeleton';
-import type { Poi, PoiType } from '../types';
+import type { ItemStatus, Poi, PoiType } from '../types';
+
+/** 나눔 품목 재고 상태 표시 (관리자·시민 공용) */
+export const SHARE_STATUS: Record<ItemStatus, { label: string; cls: string }> = {
+  PLENTY: { label: '넉넉함', cls: 'plenty' },
+  LOW: { label: '얼마 남음', cls: 'low' },
+  OUT: { label: '소진', cls: 'out' },
+};
 
 function FilterChecks({ active, onToggle }: {
   active: Set<PoiType>;
@@ -44,6 +52,7 @@ function PoiCard({ poi, onFocus }: { poi: Poi; onFocus: (poi: Poi) => void }) {
 
 export default function MapPage() {
   const { data, isLoading } = usePois();
+  const { data: share = [] } = useShare();
   const pois = useMemo(() => data?.pois ?? [], [data]);
 
   const [active, setActive] = useState<Set<PoiType>>(
@@ -74,7 +83,7 @@ export default function MapPage() {
   );
 
   /** 카드 클릭 → 지도 위치로 부드럽게 이동 + 팝업 열기 */
-  const focusPoi = (poi: Poi) => {
+  const focusPoi = (poi: { id: number; lat: number; lng: number }) => {
     mapBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     const map = mapRef.current;
     if (!map) return;
@@ -128,6 +137,26 @@ export default function MapPage() {
           })}
         </MapContainer>
       </div>
+
+      {share.length > 0 && (
+        <div className="share-status">
+          <h3 className="sub-title"><Gift size={17} className="ic accent" aria-hidden="true" />지금 나눔 현황</h3>
+          {share.map((loc) => (
+            <button key={loc.poiId} className="card share-loc"
+                    onClick={() => focusPoi({ id: loc.poiId, lat: loc.lat, lng: loc.lng })}>
+              <h3>{loc.name}</h3>
+              <div className="share-items">
+                {loc.items.map((it) => (
+                  <span key={it.id} className={`share-chip ${SHARE_STATUS[it.status].cls}`}>
+                    {it.name} · {SHARE_STATUS[it.status].label}
+                  </span>
+                ))}
+              </div>
+              <span className="navlink">지도에서 위치 보기 ↑</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <FilterChecks active={active} onToggle={toggle} />
 
