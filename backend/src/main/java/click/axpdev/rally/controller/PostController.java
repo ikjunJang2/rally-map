@@ -118,7 +118,7 @@ public class PostController {
                     .body(Map.of("error", "같은 제목의 글이 방금 등록됐어요"));
         }
         Post saved = posts.save(new Post(
-                req.category(), req.nickname().strip(), hash(req.pin()),
+                req.category(), req.nickname().strip(), hashPin(req.pin()),
                 req.title().strip(), req.body()));
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
@@ -130,6 +130,10 @@ public class PostController {
     @Transactional
     public ResponseEntity<Void> deleteByAuthor(@PathVariable Long id,
                                                @Valid @RequestBody DeleteRequest req) {
+        // 무차별 대입 방어 — 대상 글 기준 제한이라 세션을 바꿔도 우회 불가
+        if (!rateLimit.allowPinAttempt("post:" + id)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
+        }
         return posts.findById(id)
                 .filter(p -> !p.isDeleted())
                 .map(p -> {
@@ -193,7 +197,7 @@ public class PostController {
                 Instant.now().minus(Duration.ofMinutes(1)))) {
             return ResponseEntity.badRequest().body(Map.of("error", "같은 댓글이 방금 등록됐어요"));
         }
-        Comment saved = comments.save(new Comment(id, req.nickname().strip(), hash(req.pin()), req.body().strip()));
+        Comment saved = comments.save(new Comment(id, req.nickname().strip(), hashPin(req.pin()), req.body().strip()));
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
@@ -202,6 +206,9 @@ public class PostController {
     @Transactional
     public ResponseEntity<Void> deleteCommentByAuthor(@PathVariable Long commentId,
                                                       @Valid @RequestBody DeleteRequest req) {
+        if (!rateLimit.allowPinAttempt("comment:" + commentId)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
+        }
         return comments.findById(commentId)
                 .filter(c -> !c.isDeleted())
                 .map(c -> {
@@ -216,16 +223,38 @@ public class PostController {
 
     // ── 공통 ─────────────────────────────────────────────
 
-    private static boolean pinMatches(String storedHash, String pin) {
-        return MessageDigest.isEqual(
-                storedHash.getBytes(StandardCharsets.UTF_8),
-                hash(pin).getBytes(StandardCharsets.UTF_8));
+    private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
+
+    /**
+     * PIN 해시 — 레코드마다 무작위 salt를 생성해 "saltHex$hashHex"로 저장.
+     * 고정 salt와 달리 레인보우 테이블이 무력화된다 (DB 파일 탈취 시나리오 대비).
+     */
+    static String hashPin(String pin) {
+        byte[] salt = new byte[16];
+        RANDOM.nextBytes(salt);
+        String saltHex = HexFormat.of().formatHex(salt);
+        return saltHex + "$" + sha256(saltHex + ":" + pin);
     }
 
+    private static boolean pinMatches(String stored, String pin) {
+        int sep = stored.indexOf('$');
+        if (sep < 0) return false;
+        String saltHex = stored.substring(0, sep);
+        String expected = stored.substring(sep + 1);
+        return MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8),
+                sha256(saltHex + ":" + pin).getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** 신고 sidHash 등 비-비밀 식별자 해시용 (salt 불필요) */
     static String hash(String value) {
+        return sha256("rally:" + value);
+    }
+
+    private static String sha256(String value) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(md.digest(("rally:" + value).getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of().formatHex(md.digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

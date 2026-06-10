@@ -65,7 +65,8 @@ public class CctvService {
                     double lat = c.path("coordy").asDouble();
                     String url = c.path("cctvurl").asText("");
                     String name = c.path("cctvname").asText("CCTV");
-                    if (url.isEmpty()) continue;
+                    // 외부 API 응답 신뢰 금지 — https 스트림만 허용 (javascript:/data: 주입 차단)
+                    if (!url.startsWith("https://")) continue;
                     result.add(new Cctv(name, lat, lng, url, distanceM(lat, lng)));
                 }
                 result.sort(Comparator.comparingInt(Cctv::distanceM));

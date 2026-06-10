@@ -18,7 +18,8 @@ import java.util.HexFormat;
 @Service
 public class AdminAuthService {
 
-    private static final Duration TOKEN_TTL = Duration.ofHours(12);
+    // 토큰 탈취 시 노출 창을 줄이기 위해 짧게 유지 (재로그인으로 갱신)
+    private static final Duration TOKEN_TTL = Duration.ofHours(2);
 
     private final String username;
     private final String password;

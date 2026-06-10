@@ -1,6 +1,9 @@
 # www.63freedom.com — HTTPS 자동 발급(Let's Encrypt) + 프론트 리버스프록시
 www.63freedom.com {
 	encode gzip
+	# HTTPS 강제 (다운그레이드 MITM 방어). 나머지 보안 헤더는 nginx에서 부여.
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	header -Server
 	reverse_proxy frontend:80
 }
 

@@ -52,13 +52,18 @@ export default defineConfig({
             },
           },
           {
+            // 관리자·로그인 응답은 절대 캐시하지 않음 (로그아웃 후 잔존·기기 탈취 노출 방지)
+            urlPattern: /\/api\/(admin|auth)\/.*/,
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: /\/api\/.*/,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api',
               // 현장 기지국 과부하(느린 3G) 고려 — 충분히 기다린 후 캐시 폴백
               networkTimeoutSeconds: 10,
-              expiration: { maxEntries: 50, maxAgeSeconds: 24 * 3600 },
+              expiration: { maxEntries: 50, maxAgeSeconds: 6 * 3600 },
             },
           },
         ],

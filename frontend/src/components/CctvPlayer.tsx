@@ -10,6 +10,8 @@ export default function CctvPlayer({ src, title }: { src: string; title: string 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    // 프론트 2차 방어 — https HLS 스트림만 재생
+    if (!src.startsWith('https://')) return;
 
     let destroyed = false;
     let hls: { destroy: () => void } | null = null;

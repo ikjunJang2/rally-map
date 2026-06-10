@@ -33,6 +33,26 @@ public class RateLimitService {
                 && allow("rh:" + sid, 20, Duration.ofHours(1));
     }
 
+    /**
+     * PIN 검증 시도 제한 — 공격 대상(글/댓글) 기준이라 세션ID를 바꿔도 우회 불가.
+     * 무차별 대입 방어: 대상당 분당 5회 + 시간당 20회.
+     */
+    public boolean allowPinAttempt(String targetKey) {
+        return allow("pin:" + targetKey, 5, Duration.ofMinutes(1))
+                && allow("pinh:" + targetKey, 20, Duration.ofHours(1));
+    }
+
+    /** 관리자 로그인 시도 제한 — 계정 기준 전역 (분당 5회 + 15분당 10회) */
+    public boolean allowLogin() {
+        return allow("login", 5, Duration.ofMinutes(1))
+                && allow("login15", 10, Duration.ofMinutes(15));
+    }
+
+    /** 접속자 핑 전역 상한 — 메모리 고갈 DoS 방어 (분당 600회) */
+    public boolean allowPresence() {
+        return allow("presence", 600, Duration.ofMinutes(1));
+    }
+
     /** 외부 API 프록시 보호용 전역 상한 */
     public boolean allowGlobal(String key, int maxPerMinute) {
         return allow("g:" + key, maxPerMinute, Duration.ofMinutes(1));
