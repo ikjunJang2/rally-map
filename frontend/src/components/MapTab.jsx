@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, LayersControl, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
 
@@ -49,11 +49,31 @@ export default function MapTab({ pois }) {
 
   return (
     <section>
-      <MapContainer center={CENTER} zoom={16} className="map" scrollWheelZoom>
-        <TileLayer
-          attribution='&copy; OpenStreetMap'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+      <MapContainer center={CENTER} zoom={17} className="map" scrollWheelZoom>
+        <LayersControl position="topright">
+          <LayersControl.BaseLayer checked name="🛰️ 위성 (실사)">
+            <TileLayer
+              attribution='&copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+            />
+          </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer name="🗺️ 일반 지도">
+            <TileLayer
+              attribution='&copy; OpenStreetMap &copy; CARTO'
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              maxZoom={19}
+            />
+          </LayersControl.BaseLayer>
+          {/* 위성사진 위에 도로명·장소명 라벨 오버레이 */}
+          <LayersControl.Overlay checked name="장소 이름 표시">
+            <TileLayer
+              attribution='&copy; CARTO'
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
+              maxZoom={19}
+            />
+          </LayersControl.Overlay>
+        </LayersControl>
         {visible.map((p) => {
           const info = TYPE_INFO[p.type] ?? { color: '#666', label: p.type };
           return (
