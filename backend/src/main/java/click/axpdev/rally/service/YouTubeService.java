@@ -33,15 +33,27 @@ public class YouTubeService {
     private final RestClient http = RestClient.create();
     private final String apiKey;
     private final List<String> queries;
+    private final List<String> excludedChannels;
     private boolean warnedDisabled = false;
 
     public YouTubeService(StreamRepository streams,
                           @Value("${rally.youtube.api-key}") String apiKey,
-                          @Value("${rally.youtube.queries}") String queries) {
+                          @Value("${rally.youtube.queries}") String queries,
+                          @Value("${rally.youtube.excluded-channels:}") String excludedChannels) {
         this.streams = streams;
         this.apiKey = apiKey.strip();
         this.queries = Arrays.stream(queries.split(","))
                 .map(String::strip).filter(q -> !q.isEmpty()).toList();
+        this.excludedChannels = Arrays.stream(excludedChannels.split(","))
+                .map(String::strip).filter(c -> !c.isEmpty())
+                .map(String::toUpperCase).toList();
+    }
+
+    /** 채널 차단 목록 — 채널명 부분일치(대소문자 무시) */
+    private boolean isExcluded(String channel) {
+        if (channel == null) return false;
+        String upper = channel.toUpperCase();
+        return excludedChannels.stream().anyMatch(upper::contains);
     }
 
     public boolean enabled() {
@@ -62,6 +74,17 @@ public class YouTubeService {
     @Transactional
     public void searchLiveBroadcasts() {
         if (skipIfDisabled()) return;
+
+        // 차단 목록이 바뀌었을 수 있으니 기존 수집분도 매 주기 정리
+        if (!excludedChannels.isEmpty()) {
+            for (Stream s : streams.findBySource(Stream.Source.YOUTUBE)) {
+                if (isExcluded(s.getChannel())) {
+                    streams.delete(s);
+                    log.info("차단 채널 수집분 제거: {} ({})", s.getTitle(), s.getChannel());
+                }
+            }
+        }
+
         for (String q : queries) {
             try {
                 JsonNode root = http.get()
@@ -76,6 +99,7 @@ public class YouTubeService {
                     JsonNode sn = item.path("snippet");
                     String title = sn.path("title").asText("(제목 없음)");
                     String channel = sn.path("channelTitle").asText(null);
+                    if (isExcluded(channel)) continue;
                     String thumb = sn.path("thumbnails").path("medium").path("url").asText(null);
                     streams.findByVideoId(videoId).ifPresentOrElse(
                             s -> s.refreshFromYouTube(title, channel, thumb),

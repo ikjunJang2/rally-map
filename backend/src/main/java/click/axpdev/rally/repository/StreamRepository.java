@@ -9,5 +9,6 @@ import java.util.Optional;
 public interface StreamRepository extends JpaRepository<Stream, Long> {
     List<Stream> findAllByOrderByLiveDescCreatedAtDesc();
     Optional<Stream> findByVideoId(String videoId);
+    List<Stream> findBySource(Stream.Source source);
     List<Stream> findBySourceAndLiveTrue(Stream.Source source);
 }
