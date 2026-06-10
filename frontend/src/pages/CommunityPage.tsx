@@ -1,9 +1,12 @@
 import { useState, useTransition, type FormEvent } from 'react';
 import {
   MessagesSquare, MessageCircle, Megaphone, Gift, HelpCircle, Heart, PenLine,
-  type LucideIcon,
+  Flame, type LucideIcon,
 } from 'lucide-react';
-import { usePosts, useCreatePost, useDeletePostByAuthor, useAdminMutation } from '../hooks/useApi';
+import {
+  usePosts, usePopularPosts, useCreatePost, useDeletePostByAuthor, useAdminMutation,
+  useToggleLike, useComments, useCreateComment, useDeleteCommentByAuthor,
+} from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Skeleton from '../components/Skeleton';
@@ -18,6 +21,8 @@ export const CATEGORIES: Record<PostCategory, { label: string; Icon: LucideIcon 
   CHEER: { label: '응원', Icon: Heart },
 };
 
+const LIMITS = { title: 80, body: 1000, comment: 300 } as const;
+
 function timeAgo(iso: string): string {
   const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (sec < 60) return '방금';
@@ -25,6 +30,12 @@ function timeAgo(iso: string): string {
   if (sec < 86400) return `${Math.floor(sec / 3600)}시간 전`;
   return `${Math.floor(sec / 86400)}일 전`;
 }
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
+// ── 글쓰기 폼 ───────────────────────────────────────────
 
 function PostForm({ category, onDone }: { category: PostCategory | null; onDone: () => void }) {
   const create = useCreatePost();
@@ -41,39 +52,139 @@ function PostForm({ category, onDone }: { category: PostCategory | null; onDone:
       toast('success', '글이 등록됐어요');
       onDone();
     } catch (err) {
-      toast('error', err instanceof Error ? err.message : '등록에 실패했어요');
+      toast('error', errorMessage(err, '등록에 실패했어요'));
     }
   };
 
   return (
     <form className="card post-form" onSubmit={submit}>
       <div className="form-row">
-        {/* autoFocus: 폼이 열리면 키보드 포커스를 첫 입력으로 */}
-        <input required autoFocus maxLength={20} placeholder="닉네임" aria-label="닉네임"
-               value={form.nickname} onChange={set('nickname')} />
+        <input required autoFocus minLength={2} maxLength={12} placeholder="닉네임 (2~12자)"
+               aria-label="닉네임" value={form.nickname} onChange={set('nickname')} />
         <input required minLength={4} maxLength={20} type="password" placeholder="삭제용 PIN (4자+)"
                aria-label="삭제용 PIN, 4자 이상" value={form.pin} onChange={set('pin')} />
       </div>
-      <input required maxLength={100} placeholder="제목" aria-label="제목" value={form.title} onChange={set('title')} />
-      <textarea maxLength={2000} rows={4} placeholder="내용 (선택)" aria-label="내용 (선택)"
+      <input required maxLength={LIMITS.title} placeholder="제목" aria-label="제목"
+             value={form.title} onChange={set('title')} />
+      <textarea maxLength={LIMITS.body} rows={4} placeholder="내용 (선택)" aria-label="내용 (선택)"
                 value={form.body} onChange={set('body')} />
+      <p className="char-count">{form.body.length}/{LIMITS.body}</p>
       <button type="submit" className="primary" disabled={create.isPending}>
         {create.isPending ? '등록 중…' : '글 등록'}
       </button>
       <p className="notice" style={{ margin: '8px 0 0' }}>
-        익명 게시판이에요. PIN은 글 삭제할 때만 쓰이고 암호화 저장됩니다.
+        익명 게시판이에요. PIN은 삭제할 때만 쓰이고 암호화 저장됩니다.
+        욕설·스팸은 자동 차단되며, 글은 1분에 1건씩 쓸 수 있어요.
       </p>
     </form>
   );
 }
 
-function PostCard({ post }: { post: Post }) {
+// ── 댓글 ───────────────────────────────────────────────
+
+function CommentSection({ postId }: { postId: number }) {
+  const { isAdmin } = useAuth();
+  const toast = useToast();
+  const { data: comments = [], isLoading } = useComments(postId, true);
+  const create = useCreateComment(postId);
+  const delByAuthor = useDeleteCommentByAuthor(postId);
+  const adminDel = useAdminMutation(['comments', 'posts']);
+  const [form, setForm] = useState({ nickname: '', pin: '', body: '' });
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [delPin, setDelPin] = useState('');
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      await create.mutateAsync(form);
+      setForm({ nickname: '', pin: '', body: '' });
+      toast('success', '댓글이 달렸어요');
+    } catch (err) {
+      toast('error', errorMessage(err, '댓글 등록에 실패했어요'));
+    }
+  };
+
+  const authorDelete = async (e: FormEvent, id: number) => {
+    e.preventDefault();
+    try {
+      await delByAuthor.mutateAsync({ id, pin: delPin });
+      setDeletingId(null);
+      setDelPin('');
+      toast('success', '댓글을 삭제했어요');
+    } catch (err) {
+      toast('error', err instanceof ApiError && err.status === 403
+        ? 'PIN이 일치하지 않아요' : '삭제에 실패했어요');
+    }
+  };
+
+  return (
+    <div className="comment-section">
+      {isLoading && <p className="meta">댓글 불러오는 중…</p>}
+      {comments.map((c) => (
+        <div key={c.id} className="comment">
+          <p className="comment-body">{c.body}</p>
+          <p className="meta comment-foot">
+            {c.nickname} · {timeAgo(c.createdAt)}
+            <button className="linklike" onClick={() => setDeletingId(deletingId === c.id ? null : c.id)}>삭제</button>
+            {isAdmin && (
+              <button className="linklike admin"
+                      onClick={() => adminDel.mutate(
+                        { path: `/admin/comments/${c.id}`, method: 'DELETE' },
+                        { onSuccess: () => toast('success', '관리자 권한으로 삭제했어요') })}>
+                관리자 삭제
+              </button>
+            )}
+          </p>
+          {deletingId === c.id && (
+            <form className="form-row" onSubmit={(e) => authorDelete(e, c.id)}>
+              <input type="password" placeholder="작성 시 PIN" value={delPin}
+                     onChange={(e) => setDelPin(e.target.value)} />
+              <button type="submit" className="primary danger">확인</button>
+            </form>
+          )}
+        </div>
+      ))}
+
+      <form className="comment-form" onSubmit={submit}>
+        <div className="form-row">
+          <input required minLength={2} maxLength={12} placeholder="닉네임"
+                 value={form.nickname} onChange={(e) => setForm((f) => ({ ...f, nickname: e.target.value }))} />
+          <input required minLength={4} maxLength={20} type="password" placeholder="PIN"
+                 value={form.pin} onChange={(e) => setForm((f) => ({ ...f, pin: e.target.value }))} />
+        </div>
+        <div className="form-row">
+          <input required maxLength={LIMITS.comment} placeholder="댓글 (300자까지)"
+                 value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
+          <button type="submit" className="primary" disabled={create.isPending}>등록</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ── 글 카드 ─────────────────────────────────────────────
+
+function PostCard({ post, popular = false }: { post: Post; popular?: boolean }) {
   const { isAdmin } = useAuth();
   const toast = useToast();
   const delByAuthor = useDeletePostByAuthor();
   const adminDel = useAdminMutation(['posts']);
+  const like = useToggleLike();
+  const [liked, setLiked] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [pin, setPin] = useState('');
+
+  const cat = CATEGORIES[post.category];
+
+  const toggleLike = async () => {
+    try {
+      const r = await like.mutateAsync(post.id);
+      setLiked(r.liked);
+    } catch {
+      toast('error', '잠시 후 다시 시도해주세요');
+    }
+  };
 
   const authorDelete = async (e: FormEvent) => {
     e.preventDefault();
@@ -82,15 +193,14 @@ function PostCard({ post }: { post: Post }) {
       toast('success', '글을 삭제했어요');
     } catch (err) {
       toast('error', err instanceof ApiError && err.status === 403
-        ? 'PIN이 일치하지 않아요'
-        : '삭제에 실패했어요');
+        ? 'PIN이 일치하지 않아요' : '삭제에 실패했어요');
     }
   };
 
-  const cat = CATEGORIES[post.category];
   return (
-    <article className="card">
+    <article className={`card ${popular ? 'popular' : ''}`}>
       <h3>
+        {popular && <span className="badge hot"><Flame size={12} aria-hidden="true" /> 인기</span>}
         <span className="badge">
           {cat ? <><cat.Icon size={12} aria-hidden="true" /> {cat.label}</> : post.category}
         </span>
@@ -99,18 +209,25 @@ function PostCard({ post }: { post: Post }) {
       {post.body && <p className="meta post-body">{post.body}</p>}
       <p className="meta post-foot">
         {post.nickname} · {timeAgo(post.createdAt)}
-        <button className="linklike" onClick={() => setDeleting(!deleting)}>삭제</button>
-        {isAdmin && (
-          <button
-            className="linklike admin"
-            onClick={() => adminDel.mutate(
-              { path: `/admin/posts/${post.id}`, method: 'DELETE' },
-              { onSuccess: () => toast('success', '관리자 권한으로 삭제했어요') },
-            )}
-          >
-            관리자 삭제
+        <span className="post-actions">
+          <button className={`heart-btn ${liked ? 'on' : ''}`} onClick={toggleLike}
+                  aria-label={`하트 ${post.hearts}개${liked ? ', 내가 누름' : ''}`}>
+            <Heart size={15} aria-hidden="true" fill={liked ? 'currentColor' : 'none'} /> {post.hearts}
           </button>
-        )}
+          <button className="heart-btn" onClick={() => setShowComments(!showComments)}
+                  aria-expanded={showComments} aria-label={`댓글 ${post.comments}개 보기`}>
+            <MessageCircle size={15} aria-hidden="true" /> {post.comments}
+          </button>
+          <button className="linklike" onClick={() => setDeleting(!deleting)}>삭제</button>
+          {isAdmin && (
+            <button className="linklike admin"
+                    onClick={() => adminDel.mutate(
+                      { path: `/admin/posts/${post.id}`, method: 'DELETE' },
+                      { onSuccess: () => toast('success', '관리자 권한으로 삭제했어요') })}>
+              관리자 삭제
+            </button>
+          )}
+        </span>
       </p>
       {deleting && (
         <form className="form-row" onSubmit={authorDelete}>
@@ -118,9 +235,12 @@ function PostCard({ post }: { post: Post }) {
           <button type="submit" className="primary danger">확인</button>
         </form>
       )}
+      {showComments && <CommentSection postId={post.id} />}
     </article>
   );
 }
+
+// ── 페이지 ─────────────────────────────────────────────
 
 export default function CommunityPage() {
   const [category, setCategory] = useState<PostCategory | null>(null); // null = 전체
@@ -128,14 +248,17 @@ export default function CommunityPage() {
   const [writing, setWriting] = useState(false);
   const [, startTransition] = useTransition();
   const { data, isLoading } = usePosts(category, page);
+  const { data: popular = [] } = usePopularPosts();
 
   const selectCategory = (c: PostCategory | null) => {
-    // 목록 전환은 트랜지션으로 — 입력 반응성 유지
     startTransition(() => {
       setCategory(c);
       setPage(0);
     });
   };
+
+  // 인기글은 전체 탭 첫 페이지에서만, 목록과 중복돼도 따로 노출
+  const showPopular = category === null && page === 0 && popular.length > 0;
 
   return (
     <section aria-label="시민 소통 게시판">
@@ -161,6 +284,14 @@ export default function CommunityPage() {
         {writing && <PostForm category={category} onDone={() => setWriting(false)} />}
       </div>
 
+      {showPopular && (
+        <>
+          <h3 className="sub-title"><Flame size={17} className="ic red" aria-hidden="true" />지금 인기글</h3>
+          {popular.map((p) => <PostCard key={`pop-${p.id}`} post={p} popular />)}
+          <h3 className="sub-title">최신글</h3>
+        </>
+      )}
+
       {isLoading && <Skeleton lines={3} />}
       {data?.content.length === 0 && (
         <div className="card"><p className="meta">아직 글이 없어요. 첫 글을 남겨보세요!</p></div>
@@ -177,6 +308,7 @@ export default function CommunityPage() {
 
       <p className="notice">
         서로를 지켜주는 공간이에요. 개인정보(실명·연락처·얼굴 사진 링크)는 올리지 말아주세요.
+        욕설·스팸·도배는 자동으로 차단됩니다.
       </p>
     </section>
   );

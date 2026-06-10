@@ -1,7 +1,14 @@
 package click.axpdev.rally.controller;
 
+import click.axpdev.rally.domain.Comment;
 import click.axpdev.rally.domain.Post;
+import click.axpdev.rally.domain.PostLike;
+import click.axpdev.rally.repository.CommentRepository;
+import click.axpdev.rally.repository.PostLikeRepository;
 import click.axpdev.rally.repository.PostRepository;
+import click.axpdev.rally.service.ModerationService;
+import click.axpdev.rally.service.RateLimitService;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,19 +21,38 @@ import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/posts")
 public class PostController {
 
     private static final int PAGE_SIZE = 20;
+    private static final int POPULAR_COUNT = 3;
+    private static final Duration DUPLICATE_WINDOW = Duration.ofMinutes(10);
 
     private final PostRepository posts;
+    private final CommentRepository comments;
+    private final PostLikeRepository likes;
+    private final ModerationService moderation;
+    private final RateLimitService rateLimit;
 
-    public PostController(PostRepository posts) {
+    public PostController(PostRepository posts, CommentRepository comments,
+                          PostLikeRepository likes, ModerationService moderation,
+                          RateLimitService rateLimit) {
         this.posts = posts;
+        this.comments = comments;
+        this.likes = likes;
+        this.moderation = moderation;
+        this.rateLimit = rateLimit;
     }
+
+    // ── 목록 ─────────────────────────────────────────────
 
     @GetMapping
     public Page<Post> list(@RequestParam(required = false) Post.Category category,
@@ -37,15 +63,36 @@ public class PostController {
                 : posts.findByCategoryOrderByCreatedAtDesc(category, pr);
     }
 
+    /** 인기글 TOP 3 — 하트 1개 이상, 하트순 */
+    @GetMapping("/popular")
+    public List<Post> popular() {
+        return posts.findPopular(PageRequest.of(0, POPULAR_COUNT));
+    }
+
+    // ── 글 작성 (검열 + 도배 방지) ─────────────────────────
+
     public record CreateRequest(
             @NotNull Post.Category category,
-            @NotBlank @Size(max = 20) String nickname,
-            @NotBlank @Size(min = 4, max = 20) String pin,
-            @NotBlank @Size(max = 100) String title,
-            @Size(max = 2000) String body) {}
+            @NotBlank @Size(min = 2, max = 12, message = "닉네임은 2~12자") String nickname,
+            @NotBlank @Size(min = 4, max = 20, message = "PIN은 4자 이상") String pin,
+            @NotBlank @Size(max = 80, message = "제목은 80자까지") String title,
+            @Size(max = 1000, message = "본문은 1,000자까지") String body,
+            @NotBlank @Size(max = 64) String sid) {}
 
     @PostMapping
-    public ResponseEntity<Post> create(@Valid @RequestBody CreateRequest req) {
+    public ResponseEntity<?> create(@Valid @RequestBody CreateRequest req) {
+        Optional<String> blocked = moderation.check(req.nickname(), req.title(), req.body());
+        if (blocked.isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", blocked.get()));
+        }
+        if (!rateLimit.allowPost(req.sid())) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "잠시 후 다시 작성해주세요 (글은 1분에 1건, 1시간에 10건)"));
+        }
+        if (posts.existsByTitleAndCreatedAtAfter(req.title().strip(), Instant.now().minus(DUPLICATE_WINDOW))) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "같은 제목의 글이 방금 등록됐어요"));
+        }
         Post saved = posts.save(new Post(
                 req.category(), req.nickname().strip(), hash(req.pin()),
                 req.title().strip(), req.body()));
@@ -54,27 +101,106 @@ public class PostController {
 
     public record DeleteRequest(@NotBlank String pin) {}
 
-    /** 작성자 본인 삭제 — 작성 시 입력한 PIN 필요 */
+    /** 작성자 본인 삭제 — 작성 시 입력한 PIN 필요 (댓글·하트도 함께 정리) */
     @PostMapping("/{id}/delete")
+    @Transactional
     public ResponseEntity<Void> deleteByAuthor(@PathVariable Long id,
                                                @Valid @RequestBody DeleteRequest req) {
         return posts.findById(id)
                 .map(p -> {
-                    if (!MessageDigest.isEqual(
-                            p.getPinHash().getBytes(StandardCharsets.UTF_8),
-                            hash(req.pin()).getBytes(StandardCharsets.UTF_8))) {
+                    if (!pinMatches(p.getPinHash(), req.pin())) {
                         return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
                     }
+                    comments.deleteByPostId(id);
+                    likes.deleteByPostId(id);
                     posts.delete(p);
                     return ResponseEntity.noContent().<Void>build();
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    static String hash(String pin) {
+    // ── 하트 ─────────────────────────────────────────────
+
+    public record LikeRequest(@NotBlank @Size(max = 64) String sid) {}
+
+    /** 하트 토글 — 세션당 1회. 원본 sid는 저장하지 않고 해시만 */
+    @PostMapping("/{id}/like")
+    @Transactional
+    public ResponseEntity<?> toggleLike(@PathVariable Long id, @Valid @RequestBody LikeRequest req) {
+        if (!posts.existsById(id)) return ResponseEntity.notFound().build();
+        String sidHash = hash("like:" + req.sid());
+        boolean liked;
+        Optional<PostLike> existing = likes.findByPostIdAndSidHash(id, sidHash);
+        if (existing.isPresent()) {
+            likes.delete(existing.get());
+            liked = false;
+        } else {
+            likes.save(new PostLike(id, sidHash));
+            liked = true;
+        }
+        return ResponseEntity.ok(Map.of("liked", liked, "hearts", likes.countByPostId(id)));
+    }
+
+    // ── 댓글 ─────────────────────────────────────────────
+
+    @GetMapping("/{id}/comments")
+    public List<Comment> listComments(@PathVariable Long id) {
+        return comments.findByPostIdOrderByCreatedAtAsc(id);
+    }
+
+    public record CommentRequest(
+            @NotBlank @Size(min = 2, max = 12, message = "닉네임은 2~12자") String nickname,
+            @NotBlank @Size(min = 4, max = 20, message = "PIN은 4자 이상") String pin,
+            @NotBlank @Size(max = 300, message = "댓글은 300자까지") String body,
+            @NotBlank @Size(max = 64) String sid) {}
+
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<?> createComment(@PathVariable Long id,
+                                           @Valid @RequestBody CommentRequest req) {
+        if (!posts.existsById(id)) return ResponseEntity.notFound().build();
+        Optional<String> blocked = moderation.check(req.nickname(), req.body());
+        if (blocked.isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", blocked.get()));
+        }
+        if (!rateLimit.allowComment(req.sid())) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "잠시 후 다시 작성해주세요 (댓글은 1분에 3건)"));
+        }
+        if (comments.existsByPostIdAndBodyAndCreatedAtAfter(id, req.body().strip(),
+                Instant.now().minus(Duration.ofMinutes(1)))) {
+            return ResponseEntity.badRequest().body(Map.of("error", "같은 댓글이 방금 등록됐어요"));
+        }
+        Comment saved = comments.save(new Comment(id, req.nickname().strip(), hash(req.pin()), req.body().strip()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    /** 댓글 작성자 본인 삭제 */
+    @PostMapping("/comments/{commentId}/delete")
+    public ResponseEntity<Void> deleteCommentByAuthor(@PathVariable Long commentId,
+                                                      @Valid @RequestBody DeleteRequest req) {
+        return comments.findById(commentId)
+                .map(c -> {
+                    if (!pinMatches(c.getPinHash(), req.pin())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
+                    }
+                    comments.delete(c);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // ── 공통 ─────────────────────────────────────────────
+
+    private static boolean pinMatches(String storedHash, String pin) {
+        return MessageDigest.isEqual(
+                storedHash.getBytes(StandardCharsets.UTF_8),
+                hash(pin).getBytes(StandardCharsets.UTF_8));
+    }
+
+    static String hash(String value) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(md.digest(("rally:" + pin).getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of().formatHex(md.digest(("rally:" + value).getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

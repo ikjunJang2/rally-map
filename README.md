@@ -36,7 +36,7 @@ backend/    Spring Boot + JPA + H2
 |---|---|
 | `/` | 위성/일반 지도 + 시설 카드 (클릭 시 지도 이동) |
 | `/live` | 현장 라이브 목록, 유튜브 라이브 검색, 교통 CCTV |
-| `/community` | 시민 게시판 — 카테고리(자유·정보·나눔·질문·응원), 익명+PIN |
+| `/community` | 시민 게시판 — 카테고리·댓글·하트·인기글 TOP3, 익명+PIN |
 | `/call` | 원터치 긴급 전화 |
 | `/guide` | 권리·안전·교통 안내 |
 | `/admin` | 관리자 로그인 → 시설·공지·라이브 관리 |
@@ -83,8 +83,18 @@ Caddy가 80/443을 받아 Let's Encrypt 인증서를 자동 발급·갱신합니
 | GET | `/api/streams` | 현장 라이브 목록 — 유튜브 자동 수집분 포함 (썸네일·채널) |
 | GET | `/api/cctvs` | 경기장 주변 교통 CCTV 목록 + HLS 스트림 URL |
 | GET | `/api/posts` | 커뮤니티 글 (`?category=SHARE&page=0`) |
-| POST | `/api/posts` | 글 작성 (닉네임 + 삭제용 PIN) |
+| POST | `/api/posts` | 글 작성 (닉네임+PIN, 금칙어·도배 자동 차단) |
+| GET | `/api/posts/popular` | 인기글 TOP 3 (하트순) |
+| POST | `/api/posts/{id}/like` | 하트 토글 (세션당 1회) |
+| GET/POST | `/api/posts/{id}/comments` | 댓글 조회·작성 (검열 동일 적용) |
 | POST | `/api/posts/{id}/delete` | 작성자 본인 삭제 (PIN 확인) |
+
+**커뮤니티 운영 정책** (코드로 강제):
+닉네임 2–12자 · 제목 80자 · 본문 1,000자 · 댓글 300자 ·
+글 분당 1건/시간당 10건 · 댓글 분당 3건 · 링크 최대 2개 ·
+동일 제목 10분 내 재등록 차단 · 금칙어(욕설·위협·스팸) 자동 거부.
+금칙어 사전: `backend/src/main/resources/moderation-banned-words.txt`
+— 정규화(공백·특수문자·숫자 제거) 후 부분일치라 "시1발" 류 우회도 차단.
 | POST | `/api/auth/login` | 관리자 로그인 → 토큰 발급 (12시간) |
 
 **관리자 API** — `Authorization: Bearer {토큰}` 필수

@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { CctvResponse, Notice, Poi, PoisResult, Post, PostCategory, SpringPage, Stream } from '../types';
+import type { CctvResponse, Comment, Notice, Poi, PoisResult, Post, PostCategory, SpringPage, Stream } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -84,7 +84,8 @@ export interface NewPost {
 export function useCreatePost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (post: NewPost) => api<Post>('/posts', { method: 'POST', body: post }),
+    mutationFn: (post: NewPost) =>
+      api<Post>('/posts', { method: 'POST', body: { ...post, sid: presenceSid() } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['posts'] }),
   });
 }
@@ -95,6 +96,64 @@ export function useDeletePostByAuthor() {
     mutationFn: ({ id, pin }: { id: number; pin: string }) =>
       api<null>(`/posts/${id}/delete`, { method: 'POST', body: { pin } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['posts'] }),
+  });
+}
+
+/** 인기글 TOP 3 — 하트순 */
+export function usePopularPosts() {
+  return useQuery<Post[]>({
+    queryKey: ['posts', 'popular'],
+    queryFn: () => api('/posts/popular'),
+    refetchInterval: 60_000,
+    placeholderData: [],
+  });
+}
+
+/** 하트 토글 — 기기(세션)당 1회 */
+export function useToggleLike() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: number) =>
+      api<{ liked: boolean; hearts: number }>(`/posts/${postId}/like`, {
+        method: 'POST',
+        body: { sid: presenceSid() },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['posts'] }),
+  });
+}
+
+export function useComments(postId: number, enabled: boolean) {
+  return useQuery<Comment[]>({
+    queryKey: ['comments', postId],
+    queryFn: () => api(`/posts/${postId}/comments`),
+    enabled,
+  });
+}
+
+export function useCreateComment(postId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (c: { nickname: string; pin: string; body: string }) =>
+      api<Comment>(`/posts/${postId}/comments`, {
+        method: 'POST',
+        body: { ...c, sid: presenceSid() },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['comments', postId] });
+      qc.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+}
+
+export function useDeleteCommentByAuthor(postId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pin }: { id: number; pin: string }) =>
+      api<null>(`/posts/comments/${id}/delete`, { method: 'POST', body: { pin } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['comments', postId] });
+      qc.invalidateQueries({ queryKey: ['posts'] });
+    },
   });
 }
 

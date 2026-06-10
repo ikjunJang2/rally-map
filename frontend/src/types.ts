@@ -56,6 +56,16 @@ export interface Post {
   nickname: string;
   title: string;
   body: string | null;
+  hearts: number;
+  comments: number;
+  createdAt: string;
+}
+
+export interface Comment {
+  id: number;
+  postId: number;
+  nickname: string;
+  body: string;
   createdAt: string;
 }
 

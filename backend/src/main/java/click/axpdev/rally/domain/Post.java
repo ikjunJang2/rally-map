@@ -3,6 +3,7 @@ package click.axpdev.rally.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import org.hibernate.annotations.Formula;
 import java.time.Instant;
 
 /** 커뮤니티 글 — 익명, 닉네임 + 삭제용 PIN */
@@ -44,6 +45,14 @@ public class Post {
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    /** 하트 수 — post_like 집계 (읽기 전용) */
+    @Formula("(select count(*) from post_like pl where pl.post_id = id)")
+    private long hearts;
+
+    /** 댓글 수 — post_comment 집계 (읽기 전용) */
+    @Formula("(select count(*) from post_comment pc where pc.post_id = id)")
+    private long comments;
+
     protected Post() {}
 
     public Post(Category category, String nickname, String pinHash, String title, String body) {
@@ -61,4 +70,6 @@ public class Post {
     public String getTitle() { return title; }
     public String getBody() { return body; }
     public Instant getCreatedAt() { return createdAt; }
+    public long getHearts() { return hearts; }
+    public long getComments() { return comments; }
 }

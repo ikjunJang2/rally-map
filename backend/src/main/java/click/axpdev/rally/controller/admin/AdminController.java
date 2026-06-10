@@ -2,6 +2,7 @@ package click.axpdev.rally.controller.admin;
 
 import click.axpdev.rally.domain.*;
 import click.axpdev.rally.repository.*;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,13 +25,18 @@ public class AdminController {
     private final NoticeRepository notices;
     private final StreamRepository streams;
     private final PostRepository posts;
+    private final CommentRepository comments;
+    private final PostLikeRepository likes;
 
     public AdminController(PoiRepository pois, NoticeRepository notices,
-                           StreamRepository streams, PostRepository posts) {
+                           StreamRepository streams, PostRepository posts,
+                           CommentRepository comments, PostLikeRepository likes) {
         this.pois = pois;
         this.notices = notices;
         this.streams = streams;
         this.posts = posts;
+        this.comments = comments;
+        this.likes = likes;
     }
 
     // ── POI (비활성 포함 전체) ─────────────────────────────
@@ -107,10 +113,19 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── 커뮤니티 글 (관리자 삭제) ─────────────────────────
+    // ── 커뮤니티 (관리자 삭제) ─────────────────────────
     @DeleteMapping("/posts/{id}")
+    @Transactional
     public ResponseEntity<Void> deletePost(@PathVariable Long id) {
+        comments.deleteByPostId(id);
+        likes.deleteByPostId(id);
         posts.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/comments/{id}")
+    public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
+        comments.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 }
