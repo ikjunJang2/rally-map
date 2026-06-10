@@ -31,7 +31,8 @@ public class YouTubeService {
 
     private final StreamRepository streams;
     private final RestClient http = RestClient.create();
-    private final String apiKey;
+    private final String envApiKey;
+    private final SettingService settings;
     private final List<String> queries;
     private final List<String> excludedChannels;
     private boolean warnedDisabled = false;
@@ -39,9 +40,11 @@ public class YouTubeService {
     public YouTubeService(StreamRepository streams,
                           @Value("${rally.youtube.api-key}") String apiKey,
                           @Value("${rally.youtube.queries}") String queries,
-                          @Value("${rally.youtube.excluded-channels:}") String excludedChannels) {
+                          @Value("${rally.youtube.excluded-channels:}") String excludedChannels,
+                          SettingService settings) {
         this.streams = streams;
-        this.apiKey = apiKey.strip();
+        this.envApiKey = apiKey.strip();
+        this.settings = settings;
         this.queries = Arrays.stream(queries.split(","))
                 .map(String::strip).filter(q -> !q.isEmpty()).toList();
         this.excludedChannels = Arrays.stream(excludedChannels.split(","))
@@ -56,8 +59,11 @@ public class YouTubeService {
         return excludedChannels.stream().anyMatch(upper::contains);
     }
 
+    /** 관리자 콘솔 등록 키 우선, 없으면 환경변수 기본값 */
+    private String apiKey() { return settings.get("youtube.api-key", envApiKey).strip(); }
+
     public boolean enabled() {
-        return !apiKey.isBlank();
+        return !apiKey().isBlank();
     }
 
     private boolean skipIfDisabled() {
@@ -74,6 +80,7 @@ public class YouTubeService {
     @Transactional
     public void searchLiveBroadcasts() {
         if (skipIfDisabled()) return;
+        String apiKey = apiKey();
 
         // 차단 목록이 바뀌었을 수 있으니 기존 수집분도 매 주기 정리
         if (!excludedChannels.isEmpty()) {
@@ -122,6 +129,7 @@ public class YouTubeService {
 
         String ids = missing.stream().map(Stream::getChannelId).distinct()
                 .limit(50).collect(Collectors.joining(","));
+        String apiKey = apiKey();
         try {
             JsonNode root = http.get()
                     .uri(API + "/channels?part=snippet&id={ids}&key={key}", ids, apiKey)
@@ -148,6 +156,7 @@ public class YouTubeService {
     @Transactional
     public void refreshLiveStatus() {
         if (skipIfDisabled()) return;
+        String apiKey = apiKey();
         List<Stream> liveOnes = streams.findBySourceAndLiveTrue(Stream.Source.YOUTUBE);
         if (liveOnes.isEmpty()) return;
 

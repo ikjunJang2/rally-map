@@ -32,7 +32,13 @@ public class AdminSettingController {
     private static final List<Field> FIELDS = List.of(
             new Field("law.oc", "국가법령정보 OC (오픈API 이메일 ID)",
                     "open.law.go.kr 오픈API 신청 후 받는 OC. 보통 가입 이메일의 @ 앞부분이에요. 안내 탭 법령 검색에 쓰여요.",
-                    false)
+                    false),
+            new Field("youtube.api-key", "YouTube Data API 키",
+                    "console.cloud.google.com에서 발급. 현장 라이브 자동 수집(검색·시청자수)에 쓰여요. 등록하면 다음 수집 주기부터 적용돼요.",
+                    true),
+            new Field("its.api-key", "ITS 교통정보 오픈API 키 (CCTV)",
+                    "its.go.kr 오픈데이터에서 발급. 경기장 주변 교통 CCTV 조회에 쓰여요.",
+                    true)
     );
 
     private static Field field(String key) {

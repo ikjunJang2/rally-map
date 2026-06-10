@@ -459,6 +459,12 @@ function SettingsManager() {
   const mutate = useAdminMutation(['admin-settings']);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
+  const LINKS: Record<string, { url: string; label: string }> = {
+    'law.oc': { url: 'https://open.law.go.kr', label: 'open.law.go.kr' },
+    'youtube.api-key': { url: 'https://console.cloud.google.com/apis/credentials', label: 'console.cloud.google.com' },
+    'its.api-key': { url: 'https://www.its.go.kr/opendata/opendataList', label: 'its.go.kr 오픈데이터' },
+  };
+
   if (isLoading) return <Skeleton lines={3} />;
 
   const valueOf = (key: string, fallback: string) => drafts[key] ?? fallback;
@@ -484,15 +490,17 @@ function SettingsManager() {
           <p className="meta">{s.help}</p>
           <div className="form-row">
             <input placeholder={s.secret && s.set ? '등록됨 — 바꾸려면 새 키 입력' : '키 입력'}
+                   type={s.secret ? 'password' : 'text'} autoComplete="off"
                    value={valueOf(s.key, s.value)}
                    onChange={(e) => setDrafts((d) => ({ ...d, [s.key]: e.target.value }))} />
-            <button type="button" className="primary" disabled={mutate.isPending}
+            <button type="button" className="primary"
+                    disabled={mutate.isPending || (s.secret && !(drafts[s.key] ?? '').trim())}
                     onClick={() => save(s.key, valueOf(s.key, s.value))}>저장</button>
           </div>
-          {s.key === 'law.oc' && (
+          {LINKS[s.key] && (
             <p className="notice" style={{ margin: '4px 0 0' }}>
-              <a href="https://open.law.go.kr" target="_blank" rel="noreferrer">open.law.go.kr</a>
-              {' '}에서 오픈API를 신청하면 OC를 받을 수 있어요.
+              <a href={LINKS[s.key].url} target="_blank" rel="noreferrer">{LINKS[s.key].label}</a>
+              {' '}에서 발급할 수 있어요.
             </p>
           )}
           {s.set && (

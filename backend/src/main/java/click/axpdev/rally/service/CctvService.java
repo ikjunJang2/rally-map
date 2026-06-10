@@ -35,25 +35,31 @@ public class CctvService {
     public record Cctv(String name, double lat, double lng, String streamUrl, int distanceM) {}
 
     private final RestClient http = RestClient.create();
-    private final String apiKey;
+    private final String envApiKey;
+    private final SettingService settings;
 
     private List<Cctv> cache = List.of();
     private Instant cachedAt = Instant.EPOCH;
     // 스트림 중계(proxy)가 접근을 허용할 호스트 — ITS가 내려준 CCTV 호스트만 (SSRF 방지)
     private volatile Set<String> allowedHosts = Set.of();
 
-    public CctvService(@Value("${rally.its.api-key}") String apiKey) {
-        this.apiKey = apiKey.strip();
+    public CctvService(@Value("${rally.its.api-key}") String apiKey, SettingService settings) {
+        this.envApiKey = apiKey.strip();
+        this.settings = settings;
     }
 
+    /** 관리자 콘솔 등록 키 우선, 없으면 환경변수 기본값 */
+    private String apiKey() { return settings.get("its.api-key", envApiKey).strip(); }
+
     public boolean enabled() {
-        return !apiKey.isBlank();
+        return !apiKey().isBlank();
     }
 
     public synchronized List<Cctv> nearby() {
         if (!enabled()) return List.of();
         if (Instant.now().isBefore(cachedAt.plus(CACHE_TTL))) return cache;
 
+        String apiKey = apiKey();
         List<Cctv> result = new ArrayList<>();
         // type=all: 국도·고속도로 등 전체 제공처, cctvType=1: 실시간 스트리밍(HLS)
         try {
