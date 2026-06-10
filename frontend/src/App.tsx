@@ -12,6 +12,7 @@ const GuidePage = lazy(() => import('./pages/GuidePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
+const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 
 function Loading() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="admin" element={<Suspense fallback={<Loading />}><AdminPage /></Suspense>} />
         <Route path="privacy" element={<Suspense fallback={<Loading />}><PrivacyPage /></Suspense>} />
         <Route path="terms" element={<Suspense fallback={<Loading />}><TermsPage /></Suspense>} />
+        <Route path="feedback" element={<Suspense fallback={<Loading />}><FeedbackPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

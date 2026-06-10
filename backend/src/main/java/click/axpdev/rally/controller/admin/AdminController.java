@@ -30,11 +30,13 @@ public class AdminController {
     private final PostLikeRepository likes;
     private final ReportRepository reports;
     private final ShareItemRepository shareItems;
+    private final FeedbackRepository feedback;
 
     public AdminController(PoiRepository pois, NoticeRepository notices,
                            StreamRepository streams, PostRepository posts,
                            CommentRepository comments, PostLikeRepository likes,
-                           ReportRepository reports, ShareItemRepository shareItems) {
+                           ReportRepository reports, ShareItemRepository shareItems,
+                           FeedbackRepository feedback) {
         this.pois = pois;
         this.notices = notices;
         this.streams = streams;
@@ -43,6 +45,7 @@ public class AdminController {
         this.likes = likes;
         this.reports = reports;
         this.shareItems = shareItems;
+        this.feedback = feedback;
     }
 
     // ── POI (비활성 포함 전체) ─────────────────────────────
@@ -107,6 +110,18 @@ public class AdminController {
     @DeleteMapping("/share/{id}")
     public ResponseEntity<Void> deleteShareItem(@PathVariable Long id) {
         shareItems.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── 개발자에게 바란다 (피드백) ─────────────────────────
+    @GetMapping("/feedback")
+    public List<Feedback> allFeedback() {
+        return feedback.findAllByOrderByCreatedAtDesc();
+    }
+
+    @DeleteMapping("/feedback/{id}")
+    public ResponseEntity<Void> deleteFeedback(@PathVariable Long id) {
+        feedback.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 

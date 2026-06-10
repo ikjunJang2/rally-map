@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { AdminReport, AdminShareItem, CctvResponse, Comment, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
+import type { AdminReport, AdminShareItem, CctvResponse, Comment, Feedback, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -47,6 +47,24 @@ export function usePresence() {
     queryFn: () => api('/presence', { method: 'POST', body: { sid: presenceSid() } }),
     refetchInterval: 30_000,
     placeholderData: keepPreviousData,
+  });
+}
+
+/** 개발자에게 바란다 — 피드백 전송 */
+export function useCreateFeedback() {
+  return useMutation({
+    mutationFn: (f: { message: string; contact?: string }) =>
+      api<{ message: string }>('/feedback', { method: 'POST', body: { ...f, sid: presenceSid() } }),
+  });
+}
+
+/** 관리자용 피드백 목록 */
+export function useAdminFeedback() {
+  const { token, isAdmin } = useAuth();
+  return useQuery<Feedback[]>({
+    queryKey: ['admin-feedback'],
+    queryFn: () => api('/admin/feedback', { token }),
+    enabled: isAdmin,
   });
 }
 
