@@ -33,11 +33,6 @@ public class RateLimitService {
                 && allow("rh:" + sid, 20, Duration.ofHours(1));
     }
 
-    public boolean allowFeedback(String sid) {
-        return allow("fb:" + sid, 2, Duration.ofMinutes(1))
-                && allow("fbh:" + sid, 10, Duration.ofHours(1));
-    }
-
     /**
      * PIN 검증 시도 제한 — 공격 대상(글/댓글) 기준이라 세션ID를 바꿔도 우회 불가.
      * 무차별 대입 방어: 대상당 분당 5회 + 시간당 20회.

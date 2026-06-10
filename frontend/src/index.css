@@ -504,6 +504,9 @@ button.primary:active { transform: scale(0.99); }
 button.primary:disabled { opacity: 0.5; }
 button.primary.danger { background: var(--danger); }
 button.primary.wide { display: flex; width: 100%; margin: 10px 0; }
+/* primary 스타일 앵커(메일 링크 등) */
+a.primary { text-decoration: none; }
+a.primary.disabled { opacity: 0.5; pointer-events: none; }
 
 /* 세그먼트 탭 (라이브 | CCTV) */
 .seg {

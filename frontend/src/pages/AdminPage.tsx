@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift, MessageSquareHeart } from 'lucide-react';
+import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useAdminPois, useAdminDeletedPosts, useAdminReports, useAdminShare, useAdminFeedback, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
+import { useAdminPois, useAdminDeletedPosts, useAdminReports, useAdminShare, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
 import { REPORT_REASONS } from './CommunityPage';
 import { SHARE_STATUS } from './MapPage';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
@@ -452,38 +452,12 @@ function ShareManager() {
   );
 }
 
-function FeedbackInbox() {
-  const { data: list = [], isLoading } = useAdminFeedback();
-  const toast = useToast();
-  const mutate = useAdminMutation(['admin-feedback']);
-
-  if (isLoading) return <Skeleton lines={3} />;
-  if (list.length === 0) return <div className="card"><p className="meta">아직 들어온 의견이 없어요.</p></div>;
-
-  return (
-    <div>
-      {list.map((f) => (
-        <div key={f.id} className="card">
-          <p className="meta post-body">{f.message}</p>
-          <p className="meta">
-            {f.contact ? `회신: ${f.contact} · ` : ''}{new Date(f.createdAt).toLocaleString('ko-KR')}
-            <button className="linklike admin" onClick={() =>
-              mutate.mutate({ path: `/admin/feedback/${f.id}`, method: 'DELETE' },
-                { onSuccess: () => toast('success', '삭제했어요') })}>삭제</button>
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] = [
   { id: 'poi', label: '시설', icon: <MapIcon size={15} aria-hidden="true" />, el: <PoiManager /> },
   { id: 'notice', label: '공지', icon: <Megaphone size={15} aria-hidden="true" />, el: <NoticeManager /> },
   { id: 'stream', label: '라이브', icon: <Tv size={15} aria-hidden="true" />, el: <StreamManager /> },
   { id: 'share', label: '나눔', icon: <Gift size={15} aria-hidden="true" />, el: <ShareManager /> },
   { id: 'reports', label: '신고', icon: <Flag size={15} aria-hidden="true" />, el: <ReportQueue /> },
-  { id: 'feedback', label: '바란다', icon: <MessageSquareHeart size={15} aria-hidden="true" />, el: <FeedbackInbox /> },
   { id: 'deleted', label: '삭제 이력', icon: <Trash2 size={15} aria-hidden="true" />, el: <DeletedHistory /> },
 ];
 

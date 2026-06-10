@@ -35,13 +35,6 @@ export interface Stream {
   createdAt: string;
 }
 
-export interface Feedback {
-  id: number;
-  message: string;
-  contact: string | null;
-  createdAt: string;
-}
-
 export type ItemStatus = 'PLENTY' | 'LOW' | 'OUT';
 
 export interface ShareItemView {

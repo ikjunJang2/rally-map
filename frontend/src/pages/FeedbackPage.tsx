@@ -1,29 +1,20 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { MessageSquareHeart, Send } from 'lucide-react';
-import { useCreateFeedback } from '../hooks/useApi';
-import { useToast } from '../context/ToastContext';
+import { CONTACT_EMAIL } from '../config';
 
 const MAX = 2000;
 
+/**
+ * 개발자에게 바란다 — 서버를 거치지 않고 사용자의 메일 앱을 열어
+ * contact@63freedom.com 으로 보냄. (Cloudflare 라우팅으로 운영자 지메일에 수신)
+ */
 export default function FeedbackPage() {
-  const create = useCreateFeedback();
-  const toast = useToast();
   const [message, setMessage] = useState('');
-  const [contact, setContact] = useState('');
-  const [done, setDone] = useState(false);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    try {
-      const r = await create.mutateAsync({ message, contact: contact || undefined });
-      toast('success', r.message);
-      setMessage('');
-      setContact('');
-      setDone(true);
-    } catch (err) {
-      toast('error', err instanceof Error ? err.message : '전송에 실패했어요');
-    }
-  };
+  const mailto =
+    `mailto:${CONTACT_EMAIL}` +
+    `?subject=${encodeURIComponent('[주권자의 광장] 개발자에게 바란다')}` +
+    `&body=${encodeURIComponent(message)}`;
 
   return (
     <section aria-label="개발자에게 바란다">
@@ -34,29 +25,24 @@ export default function FeedbackPage() {
       <div className="card">
         <p className="meta">
           이 페이지에 바라는 점, 불편했던 점, 추가했으면 하는 기능 — 무엇이든 적어주세요.
-          시민 여러분의 의견이 이 광장을 더 낫게 만들어요.
+          아래 버튼을 누르면 메일 앱이 열리고, 받는사람이 자동으로 채워져요. 그대로 보내시면 운영진에게 전달됩니다.
         </p>
       </div>
 
-      <form className="card post-form" onSubmit={submit}>
-        <textarea required maxLength={MAX} rows={6} placeholder="바라는 점을 자유롭게 적어주세요"
+      <div className="card post-form">
+        <textarea maxLength={MAX} rows={6} placeholder="바라는 점을 자유롭게 적어주세요"
                   aria-label="바라는 점" value={message} onChange={(e) => setMessage(e.target.value)} />
         <p className="char-count">{message.length}/{MAX}</p>
-        <input maxLength={120} placeholder="회신 받을 연락처 (선택 — 이메일 등)"
-               aria-label="회신 연락처 (선택)" value={contact} onChange={(e) => setContact(e.target.value)} />
-        <button type="submit" className="primary" disabled={create.isPending || !message.trim()}>
-          <Send size={16} aria-hidden="true" /> {create.isPending ? '보내는 중…' : '보내기'}
-        </button>
+        <a className={`primary ${message.trim() ? '' : 'disabled'}`}
+           href={message.trim() ? mailto : undefined}
+           aria-disabled={!message.trim()}>
+          <Send size={16} aria-hidden="true" /> 메일로 보내기
+        </a>
         <p className="notice" style={{ margin: '8px 0 0' }}>
-          연락처는 회신이 필요할 때만 쓰이고, 적지 않아도 됩니다. 욕설·스팸은 자동 차단돼요.
+          메일 앱이 없으면 <b>{CONTACT_EMAIL}</b> 으로 직접 보내주셔도 돼요.
+          개인정보(실명·전화번호 등)는 꼭 필요할 때만 적어주세요.
         </p>
-      </form>
-
-      {done && (
-        <div className="card">
-          <p className="meta">✅ 보내주셔서 고맙습니다. 운영진이 확인하고 반영하도록 할게요.</p>
-        </div>
-      )}
+      </div>
     </section>
   );
 }
