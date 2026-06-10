@@ -22,11 +22,22 @@ public class LawController {
 
     private static final Logger log = LoggerFactory.getLogger(LawController.class);
 
+    private static final java.time.Duration CACHE_TTL = java.time.Duration.ofMinutes(30);
+    private static final int MAX_CACHE = 300;
+    private static final int UPSTREAM_PER_MINUTE = 30; // 법제처 서버 보호 — OC 정지 예방
+
     private final RestClient http = RestClient.create();
     private final String oc;
+    private final click.axpdev.rally.service.RateLimitService rateLimit;
 
-    public LawController(@Value("${rally.law.oc}") String oc) {
+    private record CacheEntry(List<Law> laws, java.time.Instant at) {}
+    private final java.util.concurrent.ConcurrentHashMap<String, CacheEntry> cache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    public LawController(@Value("${rally.law.oc}") String oc,
+                         click.axpdev.rally.service.RateLimitService rateLimit) {
         this.oc = oc.strip();
+        this.rateLimit = rateLimit;
     }
 
     public record Law(String name, String link, String dept, String date) {}
@@ -34,6 +45,16 @@ public class LawController {
     @GetMapping
     public Map<String, Object> search(@RequestParam String q) {
         if (oc.isBlank()) return Map.of("enabled", false, "laws", List.of());
+
+        String key = q.strip().toLowerCase();
+        CacheEntry hit = cache.get(key);
+        if (hit != null && java.time.Instant.now().isBefore(hit.at().plus(CACHE_TTL))) {
+            return Map.of("enabled", true, "laws", hit.laws());
+        }
+        if (!rateLimit.allowGlobal("law", UPSTREAM_PER_MINUTE)) {
+            // 상한 초과 — 만료된 캐시라도 있으면 사용, 없으면 빈 결과
+            return Map.of("enabled", true, "laws", hit != null ? hit.laws() : List.of());
+        }
 
         List<Law> result = new ArrayList<>();
         try {
@@ -55,7 +76,12 @@ public class LawController {
             }
         } catch (Exception e) {
             log.warn("법령 검색 실패 (q='{}'): {}", q, e.getMessage());
+            // 실패 시 캐시 미저장 — 다음 요청에서 재시도
+            return Map.of("enabled", true, "laws", hit != null ? hit.laws() : List.of());
         }
+
+        if (cache.size() >= MAX_CACHE) cache.clear(); // 단순 전체 비움 — 법령 검색 캐시는 재구축 비용 낮음
+        cache.put(key, new CacheEntry(List.copyOf(result), java.time.Instant.now()));
         return Map.of("enabled", true, "laws", result);
     }
 }

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2 } from 'lucide-react';
+import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { useAdminPois, useAdminDeletedPosts, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
+import { useAdminPois, useAdminDeletedPosts, useAdminReports, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
+import { REPORT_REASONS } from './CommunityPage';
 import { TYPE_INFO } from '../data/fallbackPois';
 import Skeleton from '../components/Skeleton';
 import type { Poi, PoiType } from '../types';
@@ -245,6 +246,67 @@ function StreamManager() {
   );
 }
 
+/** 신고 대기열 — 망법 44조의2 '지체 없이' 처리 의무 이행용 */
+function ReportQueue() {
+  const { data: reports = [], isLoading } = useAdminReports();
+  const toast = useToast();
+  const mutate = useAdminMutation(['admin-reports', 'posts', 'comments']);
+
+  if (isLoading) return <Skeleton lines={3} />;
+  if (reports.length === 0) {
+    return <div className="card"><p className="meta">대기 중인 신고가 없어요.</p></div>;
+  }
+
+  const resolve = (id: number) =>
+    mutate.mutate({ path: `/admin/reports/${id}/resolve`, method: 'PATCH' },
+      { onSuccess: () => toast('success', '처리 완료로 표시했어요') });
+
+  return (
+    <div>
+      <p className="notice" style={{ marginTop: 0 }}>
+        권리침해 신고는 법적으로 '지체 없이' 처리해야 해요. 판단이 어려우면
+        [임시조치]로 30일간 가린 뒤 검토하세요.
+      </p>
+      {reports.map((r) => (
+        <div key={r.id} className="card">
+          <h3>
+            <span className="badge hot">{REPORT_REASONS[r.reason] ?? r.reason}</span>
+            {r.targetType === 'POST' ? '글' : '댓글'} #{r.targetId}
+            {r.targetBlocked && <span className="ended">임시조치 중</span>}
+            {r.targetDeleted && <span className="ended">삭제됨</span>}
+          </h3>
+          {r.targetTitle && <p className="meta"><b>{r.targetTitle}</b></p>}
+          {r.targetBody && <p className="meta post-body">{r.targetBody}</p>}
+          {r.detail && <p className="meta">신고 내용: {r.detail}</p>}
+          <p className="meta">
+            접수 {new Date(r.createdAt).toLocaleString('ko-KR')}
+            <span className="post-actions">
+              {r.targetType === 'POST' && !r.targetBlocked && !r.targetDeleted && (
+                <button className="linklike" onClick={() =>
+                  mutate.mutate({ path: `/admin/posts/${r.targetId}/block`, method: 'POST' },
+                    { onSuccess: () => toast('success', '30일 임시조치했어요') })}>
+                  임시조치
+                </button>
+              )}
+              {!r.targetDeleted && (
+                <button className="linklike admin" onClick={() =>
+                  mutate.mutate({
+                    path: r.targetType === 'POST'
+                      ? `/admin/posts/${r.targetId}` : `/admin/comments/${r.targetId}`,
+                    method: 'DELETE',
+                  }, { onSuccess: () => toast('success', '삭제했어요') })}>
+                  삭제
+                </button>
+              )}
+              <button className="linklike" onClick={() => resolve(r.id)}>처리 완료</button>
+            </span>
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DeletedHistory() {
   const { data: deleted = [], isLoading } = useAdminDeletedPosts();
 
@@ -281,6 +343,7 @@ const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] 
   { id: 'poi', label: '시설', icon: <MapIcon size={15} aria-hidden="true" />, el: <PoiManager /> },
   { id: 'notice', label: '공지', icon: <Megaphone size={15} aria-hidden="true" />, el: <NoticeManager /> },
   { id: 'stream', label: '라이브', icon: <Tv size={15} aria-hidden="true" />, el: <StreamManager /> },
+  { id: 'reports', label: '신고', icon: <Flag size={15} aria-hidden="true" />, el: <ReportQueue /> },
   { id: 'deleted', label: '삭제 이력', icon: <Trash2 size={15} aria-hidden="true" />, el: <DeletedHistory /> },
 ];
 

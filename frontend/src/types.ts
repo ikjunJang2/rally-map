@@ -71,10 +71,28 @@ export interface Post {
   hearts: number;
   comments: number;
   createdAt: string;
+  /* 임시조치(망법 44조의2) — true면 서버가 내용을 가려서 내려보냄 */
+  blocked: boolean;
   /* 소프트 삭제 이력 — 관리자 감사 조회에서만 의미 있음 */
-  deleted: boolean;
-  deletedAt: string | null;
-  deletedBy: 'AUTHOR' | 'ADMIN' | null;
+  deleted?: boolean;
+  deletedAt?: string | null;
+  deletedBy?: 'AUTHOR' | 'ADMIN' | null;
+}
+
+export type ReportTargetType = 'POST' | 'COMMENT';
+export type ReportReason = 'DEFAMATION' | 'ABUSE' | 'SPAM' | 'ELECTION' | 'PRIVACY' | 'OTHER';
+
+export interface AdminReport {
+  id: number;
+  targetType: ReportTargetType;
+  targetId: number;
+  reason: ReportReason;
+  detail: string | null;
+  createdAt: string;
+  targetTitle?: string;
+  targetBody?: string;
+  targetDeleted?: boolean;
+  targetBlocked?: boolean;
 }
 
 export interface Comment {

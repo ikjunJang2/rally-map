@@ -10,6 +10,8 @@ const CommunityPage = lazy(() => import('./pages/CommunityPage'));
 const EmergencyPage = lazy(() => import('./pages/EmergencyPage'));
 const GuidePage = lazy(() => import('./pages/GuidePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
 
 function Loading() {
   return (
@@ -30,6 +32,8 @@ export default function App() {
         <Route path="call" element={<Suspense fallback={<Loading />}><EmergencyPage /></Suspense>} />
         <Route path="guide" element={<Suspense fallback={<Loading />}><GuidePage /></Suspense>} />
         <Route path="admin" element={<Suspense fallback={<Loading />}><AdminPage /></Suspense>} />
+        <Route path="privacy" element={<Suspense fallback={<Loading />}><PrivacyPage /></Suspense>} />
+        <Route path="terms" element={<Suspense fallback={<Loading />}><TermsPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

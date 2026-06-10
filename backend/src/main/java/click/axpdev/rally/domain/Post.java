@@ -53,7 +53,7 @@ public class Post {
     @Formula("(select count(*) from post_comment pc where pc.post_id = id and pc.deleted = false)")
     private long comments;
 
-    /* 소프트 삭제 — 화면에서만 숨기고 DB에는 이력으로 영구 보존 */
+    /* 소프트 삭제 — 화면에서 숨기고 이력은 보존 기간(rally.community.retention-days) 후 자동 파기 */
     @Column(nullable = false)
     private boolean deleted = false;
 
@@ -61,6 +61,9 @@ public class Post {
 
     @Enumerated(EnumType.STRING)
     private DeletedBy deletedBy;
+
+    /** 임시조치(정보통신망법 44조의2) — 이 시각까지 내용 가림 처리 */
+    private Instant blockedUntil;
 
     protected Post() {}
 
@@ -90,4 +93,14 @@ public class Post {
         this.deletedAt = Instant.now();
         this.deletedBy = by;
     }
+
+    public Instant getBlockedUntil() { return blockedUntil; }
+
+    /** 임시조치 중인가 (만료 시 자동으로 다시 공개) */
+    public boolean isBlocked() {
+        return blockedUntil != null && Instant.now().isBefore(blockedUntil);
+    }
+
+    public void block(Instant until) { this.blockedUntil = until; }
+    public void unblock() { this.blockedUntil = null; }
 }

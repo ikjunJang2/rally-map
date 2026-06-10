@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { CctvResponse, Comment, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, SpringPage, Stream } from '../types';
+import type { AdminReport, CctvResponse, Comment, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, SpringPage, Stream } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -182,6 +182,25 @@ export function useAdminMutation(invalidateKeys: string[]) {
       api<unknown>(path, { method, body, token }),
     onSuccess: () =>
       invalidateKeys.forEach((key) => qc.invalidateQueries({ queryKey: [key] })),
+  });
+}
+
+/** 권리침해·위법 게시물 신고 */
+export function useCreateReport() {
+  return useMutation({
+    mutationFn: (r: { targetType: ReportTargetType; targetId: number; reason: ReportReason; detail?: string }) =>
+      api<{ message: string }>('/reports', { method: 'POST', body: { ...r, sid: presenceSid() } }),
+  });
+}
+
+/** 관리자용 신고 대기열 */
+export function useAdminReports() {
+  const { token, isAdmin } = useAuth();
+  return useQuery<AdminReport[]>({
+    queryKey: ['admin-reports'],
+    queryFn: () => api('/admin/reports', { token }),
+    enabled: isAdmin,
+    refetchInterval: 60_000,
   });
 }
 

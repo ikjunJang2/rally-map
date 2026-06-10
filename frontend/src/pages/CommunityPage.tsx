@@ -1,17 +1,27 @@
 import { useState, useTransition, type FormEvent } from 'react';
 import {
   MessagesSquare, MessageCircle, Megaphone, Gift, HelpCircle, Heart, PenLine,
-  Flame, type LucideIcon,
+  Flame, Flag, ShieldAlert, type LucideIcon,
 } from 'lucide-react';
 import {
   usePosts, usePopularPosts, useCreatePost, useDeletePostByAuthor, useAdminMutation,
-  useToggleLike, useComments, useCreateComment, useDeleteCommentByAuthor,
+  useToggleLike, useComments, useCreateComment, useDeleteCommentByAuthor, useCreateReport,
 } from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Skeleton from '../components/Skeleton';
 import { ApiError } from '../api/client';
-import type { Post, PostCategory } from '../types';
+import { RETENTION_DAYS } from '../config';
+import type { Post, PostCategory, ReportReason, ReportTargetType } from '../types';
+
+export const REPORT_REASONS: Record<ReportReason, string> = {
+  DEFAMATION: '명예훼손·사생활 침해',
+  ABUSE: '욕설·혐오',
+  SPAM: '스팸·광고',
+  ELECTION: '선거법 위반',
+  PRIVACY: '개인정보 노출',
+  OTHER: '기타',
+};
 
 export const CATEGORIES: Record<PostCategory, { label: string; Icon: LucideIcon }> = {
   FREE: { label: '자유', Icon: MessageCircle },
@@ -33,6 +43,44 @@ function timeAgo(iso: string): string {
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
+}
+
+/** 신고 폼 — 글·댓글 공용 (망법 44조의2 신고 창구) */
+function ReportForm({ targetType, targetId, onDone }: {
+  targetType: ReportTargetType;
+  targetId: number;
+  onDone: () => void;
+}) {
+  const report = useCreateReport();
+  const toast = useToast();
+  const [reason, setReason] = useState<ReportReason>('DEFAMATION');
+  const [detail, setDetail] = useState('');
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      const r = await report.mutateAsync({ targetType, targetId, reason, detail: detail || undefined });
+      toast('success', r.message);
+      onDone();
+    } catch (err) {
+      toast('error', errorMessage(err, '신고 접수에 실패했어요'));
+    }
+  };
+
+  return (
+    <form className="report-form" onSubmit={submit}>
+      <select value={reason} onChange={(e) => setReason(e.target.value as ReportReason)} aria-label="신고 사유">
+        {(Object.entries(REPORT_REASONS) as [ReportReason, string][]).map(([k, label]) => (
+          <option key={k} value={k}>{label}</option>
+        ))}
+      </select>
+      <div className="form-row">
+        <input maxLength={500} placeholder="상세 내용 (선택)" value={detail}
+               onChange={(e) => setDetail(e.target.value)} />
+        <button type="submit" className="primary danger" disabled={report.isPending}>신고</button>
+      </div>
+    </form>
+  );
 }
 
 // ── 글쓰기 폼 ───────────────────────────────────────────
@@ -91,6 +139,7 @@ function CommentSection({ postId }: { postId: number }) {
   const adminDel = useAdminMutation(['comments', 'posts']);
   const [form, setForm] = useState({ nickname: '', pin: '', body: '' });
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [reportingId, setReportingId] = useState<number | null>(null);
   const [delPin, setDelPin] = useState('');
 
   const submit = async (e: FormEvent) => {
@@ -125,6 +174,7 @@ function CommentSection({ postId }: { postId: number }) {
           <p className="comment-body">{c.body}</p>
           <p className="meta comment-foot">
             {c.nickname} · {timeAgo(c.createdAt)}
+            <button className="linklike" onClick={() => setReportingId(reportingId === c.id ? null : c.id)}>신고</button>
             <button className="linklike" onClick={() => setDeletingId(deletingId === c.id ? null : c.id)}>삭제</button>
             {isAdmin && (
               <button className="linklike admin"
@@ -135,6 +185,9 @@ function CommentSection({ postId }: { postId: number }) {
               </button>
             )}
           </p>
+          {reportingId === c.id && (
+            <ReportForm targetType="COMMENT" targetId={c.id} onDone={() => setReportingId(null)} />
+          )}
           {deletingId === c.id && (
             <form className="form-row" onSubmit={(e) => authorDelete(e, c.id)}>
               <input type="password" placeholder="작성 시 PIN" value={delPin}
@@ -172,10 +225,28 @@ function PostCard({ post, popular = false }: { post: Post; popular?: boolean }) 
   const like = useToggleLike();
   const [liked, setLiked] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [pin, setPin] = useState('');
 
   const cat = CATEGORIES[post.category];
+
+  // 임시조치된 글 — 서버가 내용을 가려서 보냄, 조치 사실만 표시
+  if (post.blocked) {
+    return (
+      <article className="card blocked">
+        <h3><ShieldAlert size={16} className="ic" aria-hidden="true" />{post.title}</h3>
+        <p className="meta">{post.body}</p>
+        {isAdmin && (
+          <button className="linklike" onClick={() => adminDel.mutate(
+            { path: `/admin/posts/${post.id}/block`, method: 'DELETE' },
+            { onSuccess: () => toast('success', '임시조치를 해제했어요') })}>
+            임시조치 해제
+          </button>
+        )}
+      </article>
+    );
+  }
 
   const toggleLike = async () => {
     try {
@@ -218,6 +289,10 @@ function PostCard({ post, popular = false }: { post: Post; popular?: boolean }) 
                   aria-expanded={showComments} aria-label={`댓글 ${post.comments}개 보기`}>
             <MessageCircle size={15} aria-hidden="true" /> {post.comments}
           </button>
+          <button className="linklike" onClick={() => setReporting(!reporting)}
+                  aria-expanded={reporting}>
+            <Flag size={12} aria-hidden="true" /> 신고
+          </button>
           <button className="linklike" onClick={() => setDeleting(!deleting)}>삭제</button>
           {isAdmin && (
             <button className="linklike admin"
@@ -229,11 +304,19 @@ function PostCard({ post, popular = false }: { post: Post; popular?: boolean }) 
           )}
         </span>
       </p>
+      {reporting && (
+        <ReportForm targetType="POST" targetId={post.id} onDone={() => setReporting(false)} />
+      )}
       {deleting && (
         <form className="form-row" onSubmit={authorDelete}>
           <input type="password" placeholder="작성 시 PIN" value={pin} onChange={(e) => setPin(e.target.value)} />
           <button type="submit" className="primary danger">확인</button>
         </form>
+      )}
+      {deleting && (
+        <p className="notice" style={{ margin: '6px 0 0' }}>
+          삭제하면 화면에서 사라지며, 분쟁 대응을 위해 이력이 {RETENTION_DAYS}일 보존 후 완전 파기됩니다.
+        </p>
       )}
       {showComments && <CommentSection postId={post.id} />}
     </article>

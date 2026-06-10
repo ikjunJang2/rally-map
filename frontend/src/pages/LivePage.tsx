@@ -29,6 +29,10 @@ function StreamCard({ s }: { s: Stream }) {
           {s.live
             ? <span className="live-dot">LIVE</span>
             : <span className="ended">종료</span>}
+          {/* 출처 표기 — YouTube API 약관(III.F) attribution, 수동 등록과 시각 구분 */}
+          {s.source === 'YOUTUBE'
+            ? <span className="src-badge yt-badge">▶ YouTube</span>
+            : <span className="src-badge">운영진 등록</span>}
           {s.title}
         </h3>
         {s.channel && (
@@ -141,6 +145,13 @@ function LiveSection() {
           <ChevronDown size={17} aria-hidden="true" /> 더보기 ({remaining}개)
         </button>
       )}
+      <p className="notice">
+        라이브 목록은 YouTube API Services에서 제공되며 1분마다 자동 갱신됩니다.
+        검색 노이즈 제거를 위해 일부 채널은 자동 수집에서 제외될 수 있어요
+        (유튜브에서 직접 검색하면 모두 볼 수 있습니다). 종료된 방송 정보는 48시간 후
+        자동 삭제됩니다. 이용 시 <a href="https://www.youtube.com/t/terms" target="_blank" rel="noreferrer">YouTube
+        이용약관</a>이 적용됩니다.
+      </p>
     </>
   );
 }

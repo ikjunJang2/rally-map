@@ -51,6 +51,9 @@ public class Stream {
     @Column(nullable = false)
     private boolean live = true;
 
+    /** 종료 감지 시각 — 유튜브 API 데이터 30일 보관 제한 준수용 (48시간 후 자동 삭제) */
+    private Instant endedAt;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -87,7 +90,12 @@ public class Stream {
     public boolean isLive() { return live; }
     public Instant getCreatedAt() { return createdAt; }
 
-    public void setLive(boolean live) { this.live = live; }
+    public void setLive(boolean live) {
+        this.live = live;
+        this.endedAt = live ? null : Instant.now();
+    }
+
+    public Instant getEndedAt() { return endedAt; }
     public void setChannelThumbnail(String channelThumbnail) { this.channelThumbnail = channelThumbnail; }
     public void setViewers(Long viewers) { this.viewers = viewers; }
 
@@ -97,5 +105,6 @@ public class Stream {
         this.channel = channel;
         this.thumbnail = thumbnail;
         this.live = true;
+        this.endedAt = null;
     }
 }

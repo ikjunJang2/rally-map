@@ -26,19 +26,20 @@ export default defineConfig({
         // 지도 타일·외부 CDN은 한 번 본 영역을 캐시 → 현장 통신 장애에도 지도 표시
         runtimeCaching: [
           {
+            // OSM 타일 정책상 브라우저 표준 캐싱 범위 내 사용 (2일)
+            urlPattern: /^https:\/\/tile\.openstreetmap\.org\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'tiles-osm',
+              expiration: { maxEntries: 300, maxAgeSeconds: 2 * 24 * 3600 },
+            },
+          },
+          {
             urlPattern: /^https:\/\/server\.arcgisonline\.com\/.*/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'tiles-esri',
-              expiration: { maxEntries: 300, maxAgeSeconds: 7 * 24 * 3600 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/[a-z]\.basemaps\.cartocdn\.com\/.*/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'tiles-carto',
-              expiration: { maxEntries: 300, maxAgeSeconds: 7 * 24 * 3600 },
+              expiration: { maxEntries: 200, maxAgeSeconds: 2 * 24 * 3600 },
             },
           },
           {

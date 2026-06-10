@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 관리자 전용 CRUD. 모든 /api/admin/** 요청은 AdminInterceptor가 Bearer 토큰을 검증한다.
@@ -27,16 +28,19 @@ public class AdminController {
     private final PostRepository posts;
     private final CommentRepository comments;
     private final PostLikeRepository likes;
+    private final ReportRepository reports;
 
     public AdminController(PoiRepository pois, NoticeRepository notices,
                            StreamRepository streams, PostRepository posts,
-                           CommentRepository comments, PostLikeRepository likes) {
+                           CommentRepository comments, PostLikeRepository likes,
+                           ReportRepository reports) {
         this.pois = pois;
         this.notices = notices;
         this.streams = streams;
         this.posts = posts;
         this.comments = comments;
         this.likes = likes;
+        this.reports = reports;
     }
 
     // ── POI (비활성 포함 전체) ─────────────────────────────
@@ -140,5 +144,73 @@ public class AdminController {
     @GetMapping("/posts/deleted")
     public List<Post> deletedPosts() {
         return posts.findByDeletedTrueOrderByDeletedAtDesc();
+    }
+
+    // ── 신고 처리 (망법 44조의2 임시조치) ──────────────────
+
+    /** 대기 중 신고 목록 — 대상 글/댓글 내용 포함 */
+    @GetMapping("/reports")
+    public List<Map<String, Object>> pendingReports() {
+        return reports.findByStatusOrderByCreatedAtAsc(Report.Status.PENDING).stream()
+                .map(r -> {
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", r.getId());
+                    m.put("targetType", r.getTargetType());
+                    m.put("targetId", r.getTargetId());
+                    m.put("reason", r.getReason());
+                    m.put("detail", r.getDetail());
+                    m.put("createdAt", r.getCreatedAt());
+                    if (r.getTargetType() == Report.TargetType.POST) {
+                        posts.findById(r.getTargetId()).ifPresent(p -> {
+                            m.put("targetTitle", p.getTitle());
+                            m.put("targetBody", p.getBody());
+                            m.put("targetDeleted", p.isDeleted());
+                            m.put("targetBlocked", p.isBlocked());
+                        });
+                    } else {
+                        comments.findById(r.getTargetId()).ifPresent(c -> {
+                            m.put("targetBody", c.getBody());
+                            m.put("targetDeleted", c.isDeleted());
+                        });
+                    }
+                    return m;
+                })
+                .toList();
+    }
+
+    /** 신고 처리 완료 표시 */
+    @PatchMapping("/reports/{id}/resolve")
+    @Transactional
+    public ResponseEntity<Void> resolveReport(@PathVariable Long id) {
+        return reports.findById(id)
+                .map(r -> {
+                    r.resolve();
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** 임시조치 — 30일간 내용 가림 (정보통신망법 44조의2 4항) */
+    @PostMapping("/posts/{id}/block")
+    @Transactional
+    public ResponseEntity<Void> blockPost(@PathVariable Long id) {
+        return posts.findById(id)
+                .map(p -> {
+                    p.block(java.time.Instant.now().plus(java.time.Duration.ofDays(30)));
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** 임시조치 해제 */
+    @DeleteMapping("/posts/{id}/block")
+    @Transactional
+    public ResponseEntity<Void> unblockPost(@PathVariable Long id) {
+        return posts.findById(id)
+                .map(p -> {
+                    p.unblock();
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }

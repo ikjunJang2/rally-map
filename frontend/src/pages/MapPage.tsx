@@ -87,28 +87,23 @@ export default function MapPage() {
     <section aria-label="현장 지도">
       <div ref={mapBoxRef} style={{ scrollMarginTop: '110px' }} role="region" aria-label="현장 지도 — 화살표 키로 이동, +/- 키로 확대·축소">
         <MapContainer ref={mapRef} center={CENTER} zoom={17} className="map" scrollWheelZoom>
+          {/* 타일 약관 준수: 기본은 OSM 표준(무료 공개 허용·라벨 내장),
+              위성은 보조 레이어. CARTO는 그랜트 전용이라 제거함 */}
           <LayersControl position="topright">
-            <LayersControl.BaseLayer checked name="위성 (실사)">
+            <LayersControl.BaseLayer checked name="일반 지도">
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="위성 (실사)">
               <TileLayer
                 attribution='&copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 maxZoom={19}
               />
             </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="일반 지도">
-              <TileLayer
-                attribution='&copy; OpenStreetMap &copy; CARTO'
-                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                maxZoom={19}
-              />
-            </LayersControl.BaseLayer>
-            <LayersControl.Overlay checked name="장소 이름 표시">
-              <TileLayer
-                attribution='&copy; CARTO'
-                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
-                maxZoom={19}
-              />
-            </LayersControl.Overlay>
           </LayersControl>
           {visible.map((p) => {
             const info = TYPE_INFO[p.type] ?? { color: '#666', label: p.type };

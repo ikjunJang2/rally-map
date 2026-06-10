@@ -55,19 +55,42 @@ public class PostController {
 
     // ── 목록 ─────────────────────────────────────────────
 
-    @GetMapping
-    public Page<Post> list(@RequestParam(required = false) Post.Category category,
-                           @RequestParam(defaultValue = "0") int page) {
-        PageRequest pr = PageRequest.of(Math.max(0, page), PAGE_SIZE);
-        return category == null
-                ? posts.findByDeletedFalseOrderByCreatedAtDesc(pr)
-                : posts.findByCategoryAndDeletedFalseOrderByCreatedAtDesc(category, pr);
+    /**
+     * 공개 응답 뷰 — 임시조치(망법 44조의2)된 글은 서버에서 내용을 가려서 내려보낸다.
+     * 자리 표시는 유지해 조치 사실을 알 수 있게 한다.
+     */
+    public record PostView(Long id, Post.Category category, String nickname, String title,
+                           String body, long hearts, long comments, java.time.Instant createdAt,
+                           boolean blocked) {
+        static PostView of(Post p) {
+            if (p.isBlocked()) {
+                return new PostView(p.getId(), p.getCategory(), "-",
+                        "권리침해 신고로 임시조치된 게시물입니다",
+                        "운영진 검토 또는 이의신청 절차가 끝나면 다시 표시됩니다.",
+                        p.getHearts(), p.getComments(), p.getCreatedAt(), true);
+            }
+            return new PostView(p.getId(), p.getCategory(), p.getNickname(), p.getTitle(),
+                    p.getBody(), p.getHearts(), p.getComments(), p.getCreatedAt(), false);
+        }
     }
 
-    /** 인기글 TOP 3 — 하트 1개 이상, 하트순 */
+    @GetMapping
+    public Page<PostView> list(@RequestParam(required = false) Post.Category category,
+                               @RequestParam(defaultValue = "0") int page) {
+        PageRequest pr = PageRequest.of(Math.max(0, page), PAGE_SIZE);
+        Page<Post> result = category == null
+                ? posts.findByDeletedFalseOrderByCreatedAtDesc(pr)
+                : posts.findByCategoryAndDeletedFalseOrderByCreatedAtDesc(category, pr);
+        return result.map(PostView::of);
+    }
+
+    /** 인기글 TOP 3 — 하트 1개 이상, 하트순 (임시조치 글 제외) */
     @GetMapping("/popular")
-    public List<Post> popular() {
-        return posts.findPopular(PageRequest.of(0, POPULAR_COUNT));
+    public List<PostView> popular() {
+        return posts.findPopular(PageRequest.of(0, POPULAR_COUNT)).stream()
+                .filter(p -> !p.isBlocked())
+                .map(PostView::of)
+                .toList();
     }
 
     // ── 글 작성 (검열 + 도배 방지) ─────────────────────────

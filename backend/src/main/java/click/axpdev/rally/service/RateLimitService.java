@@ -28,6 +28,16 @@ public class RateLimitService {
                 && allow("ch:" + sid, 30, Duration.ofHours(1));
     }
 
+    public boolean allowReport(String sid) {
+        return allow("r:" + sid, 3, Duration.ofMinutes(1))
+                && allow("rh:" + sid, 20, Duration.ofHours(1));
+    }
+
+    /** 외부 API 프록시 보호용 전역 상한 */
+    public boolean allowGlobal(String key, int maxPerMinute) {
+        return allow("g:" + key, maxPerMinute, Duration.ofMinutes(1));
+    }
+
     private boolean allow(String key, int max, Duration window) {
         Instant cutoff = Instant.now().minus(window);
         Deque<Instant> deque = hits.computeIfAbsent(key, k -> new ArrayDeque<>());

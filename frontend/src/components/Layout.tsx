@@ -116,6 +116,10 @@ export default function Layout() {
 
       <footer>
         시민이 시민을 위해 만든 페이지 · 추적기 없음 · 오픈소스
+        <p className="footer-links">
+          <Link to="/privacy">개인정보처리방침</Link> · <Link to="/terms">이용약관</Link> ·{' '}
+          <a href="mailto:contact@63freedom.com">신고·문의</a>
+        </p>
       </footer>
 
       <nav className="bottom-nav" aria-label="주요 메뉴">

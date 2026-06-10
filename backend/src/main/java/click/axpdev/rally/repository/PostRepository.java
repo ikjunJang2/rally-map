@@ -26,4 +26,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     /** 관리자 감사용 — 삭제 이력 */
     List<Post> findByDeletedTrueOrderByDeletedAtDesc();
+
+    /** 보존 기간 경과 — 파기 대상 */
+    List<Post> findByDeletedTrueAndDeletedAtBefore(Instant cutoff);
 }

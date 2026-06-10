@@ -11,4 +11,5 @@ public interface StreamRepository extends JpaRepository<Stream, Long> {
     Optional<Stream> findByVideoId(String videoId);
     List<Stream> findBySource(Stream.Source source);
     List<Stream> findBySourceAndLiveTrue(Stream.Source source);
+    List<Stream> findBySourceAndLiveFalse(Stream.Source source);
 }
