@@ -18,8 +18,13 @@ function formatViewers(n: number): string {
 }
 
 function StreamCard({ s }: { s: Stream }) {
+  // 채널의 '현재 라이브'로 바로 가는 링크 → 처음(녹화 시작점)이 아니라 지금 실시간(라이브 엣지)으로 열림.
+  // 채널ID 없는 수동 등록분은 원래 URL 사용.
+  const href = s.channelId
+    ? `https://www.youtube.com/channel/${s.channelId}/live`
+    : s.url;
   return (
-    <a className="card streamcard yt" href={s.url} target="_blank" rel="noreferrer"
+    <a className="card streamcard yt" href={href} target="_blank" rel="noreferrer"
        aria-label={`${s.title} — 유튜브에서 보기`}>
       {s.thumbnail && (
         <img className="yt-thumb" src={s.thumbnail} alt="" loading="lazy" />
