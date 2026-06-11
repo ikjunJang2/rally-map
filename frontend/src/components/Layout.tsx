@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Landmark, Moon, Sun, ALargeSmall, Settings,
   Map, Tv, MessagesSquare, Phone, BookOpen,
-  WifiOff, PlugZap, Users, type LucideIcon,
+  WifiOff, PlugZap, Users, Music4, Megaphone, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -11,7 +11,6 @@ import { usePois, useNotices, usePresence } from '../hooks/useApi';
 import { useSwipeNav, SWIPE_TABS } from '../hooks/useSwipeNav';
 import NoticeBoard from './NoticeBoard';
 import ErrorBoundary from './ErrorBoundary';
-import Taegeuk from './Taegeuk';
 
 const NAV: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/', label: '지도', Icon: Map },
@@ -110,7 +109,10 @@ export default function Layout() {
         </h1>
         <div className="toggles">
           <Link to="/anthem" className="game-link" aria-label="애국가 건반 게임" title="애국가 건반 🎹">
-            <Taegeuk badge className="header-taegeuk" />
+            <Music4 size={20} aria-hidden="true" />
+          </Link>
+          <Link to="/board" className="board-link" aria-label="전광판·소리내기" title="전광판·소리내기 📢">
+            <Megaphone size={20} aria-hidden="true" />
           </Link>
           <button onClick={toggleBig} aria-label="글자 크기 바꾸기">
             <ALargeSmall size={20} aria-hidden="true" />

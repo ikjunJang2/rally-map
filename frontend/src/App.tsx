@@ -14,6 +14,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 const AnthemPage = lazy(() => import('./pages/AnthemPage'));
+const BoardPage = lazy(() => import('./pages/BoardPage'));
 
 function Loading() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="terms" element={<Suspense fallback={<Loading />}><TermsPage /></Suspense>} />
         <Route path="feedback" element={<Suspense fallback={<Loading />}><FeedbackPage /></Suspense>} />
         <Route path="anthem" element={<Suspense fallback={<Loading />}><AnthemPage /></Suspense>} />
+        <Route path="board" element={<Suspense fallback={<Loading />}><BoardPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
