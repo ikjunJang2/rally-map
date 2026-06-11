@@ -70,6 +70,20 @@ function StreamCard({ s }: { s: Stream }) {
   );
 }
 
+// 공식 교통 CCTV 지도 링크 — 인앱 재생이 안 될 때(키 미설정·ITS 장애/차단)의 대안
+function ExternalCctvLinks() {
+  return (
+    <>
+      {CCTV_LINKS.map((c) => (
+        <a key={c.url} className="card streamcard" href={c.url} target="_blank" rel="noreferrer">
+          <h3><Cctv size={17} className="ic" aria-hidden="true" />{c.label}</h3>
+          <span className="navlink"><ExternalLink size={14} aria-hidden="true" /> 새 창에서 열기</span>
+        </a>
+      ))}
+    </>
+  );
+}
+
 function CctvSection() {
   const { data, isLoading } = useCctvs();
   const [openUrl, setOpenUrl] = useState<string | null>(null);
@@ -86,22 +100,29 @@ function CctvSection() {
             바로 볼 수 있어요. 지금은 아래 공식 지도에서 확인해주세요.
           </p>
         </div>
-        {CCTV_LINKS.map((c) => (
-          <a key={c.url} className="card streamcard" href={c.url} target="_blank" rel="noreferrer">
-            <h3><Cctv size={17} className="ic" aria-hidden="true" />{c.label}</h3>
-            <span className="navlink"><ExternalLink size={14} aria-hidden="true" /> 새 창에서 열기</span>
-          </a>
-        ))}
+        <ExternalCctvLinks />
       </>
     );
   }
 
   if (data.cameras.length === 0) {
+    // 장애·차단(error)일 땐 막다른 길 대신 공식 CCTV 지도로 우회 안내
+    if (data.error) {
+      return (
+        <>
+          <div className="card">
+            <p className="meta">
+              지금은 국가교통정보센터(ITS)에서 CCTV 목록을 불러올 수 없어요.
+              잠시 후 다시 시도하거나, 아래 공식 지도에서 바로 확인해주세요.
+            </p>
+          </div>
+          <ExternalCctvLinks />
+        </>
+      );
+    }
     return (
       <div className="card">
-        <p className="meta">{data.error
-          ? '지금은 국가교통정보센터(ITS)에서 CCTV 목록을 불러올 수 없어요. 잠시 후 다시 시도해주세요.'
-          : '주변 5km 안에서 공개된 실시간 CCTV를 찾지 못했어요. 교통 CCTV는 주요 간선도로 위주로 설치돼 있어요.'}</p>
+        <p className="meta">주변 5km 안에서 공개된 실시간 CCTV를 찾지 못했어요. 교통 CCTV는 주요 간선도로 위주로 설치돼 있어요.</p>
       </div>
     );
   }
