@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Landmark, Moon, Sun, ALargeSmall, Settings,
   Map, Tv, MessagesSquare, Phone, BookOpen,
@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { usePois, useNotices, usePresence } from '../hooks/useApi';
+import { useSwipeNav, SWIPE_TABS } from '../hooks/useSwipeNav';
 import NoticeBoard from './NoticeBoard';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -71,6 +72,21 @@ export default function Layout() {
   const { data: presence } = usePresence();
   const { pathname } = useLocation();
 
+  useSwipeNav();
+
+  // 탭 이동 방향에 맞춘 슬라이드 애니메이션 (스와이프·탭 클릭 공통)
+  const prevTab = useRef(SWIPE_TABS.indexOf(pathname));
+  const [pageAnim, setPageAnim] = useState('');
+  useEffect(() => {
+    const idx = SWIPE_TABS.indexOf(pathname);
+    if (idx >= 0 && prevTab.current >= 0 && idx !== prevTab.current) {
+      const dir = idx > prevTab.current ? 'from-right' : 'from-left';
+      setPageAnim('');
+      requestAnimationFrame(() => setPageAnim(`page-anim ${dir}`));
+    }
+    prevTab.current = idx;
+  }, [pathname]);
+
   // 페이지 이동 시 스크롤 맨 위로
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -107,7 +123,7 @@ export default function Layout() {
 
       {pathname === '/' && <Hero />}
 
-      <main id="main" tabIndex={-1}>
+      <main id="main" tabIndex={-1} className={pageAnim}>
         <NoticeBoard notices={notices ?? []} />
         <ErrorBoundary>
           <Outlet />

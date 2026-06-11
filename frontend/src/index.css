@@ -225,6 +225,13 @@ main { padding: 16px 14px; }
 
 .map { height: 44vh; min-height: 280px; border-radius: 16px; z-index: 1; border: 1px solid var(--border); }
 
+/* 탭 전환 슬라이드 — 스와이프/탭 클릭 공통, 방향에 맞춰 자연스럽게 */
+@keyframes pageFromRight { from { opacity: .35; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+@keyframes pageFromLeft  { from { opacity: .35; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+.page-anim.from-right { animation: pageFromRight .22s ease-out; }
+.page-anim.from-left  { animation: pageFromLeft .22s ease-out; }
+@media (prefers-reduced-motion: reduce) { .page-anim.from-right, .page-anim.from-left { animation: none; } }
+
 /* 관리자 좌표 찍기 미니맵 */
 .pick-map { height: 200px; border-radius: 12px; border: 1px solid var(--border); z-index: 1; }
 
