@@ -23,8 +23,9 @@ export default function BoardPage() {
   const [text, setText] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [bg, setBg] = useState(BGS[0]);
-  const [effect, setEffect] = useState('scroll');
-  const [chant, setChant] = useState(true); // 한 글자씩(구호) — 기본 켜짐
+  const [effect, setEffect] = useState('static'); // 기본은 또렷이 보이는 고정 (흐르기는 선택)
+  const [spaceOut, setSpaceOut] = useState(false); // 전광판 글자 띄우기(구호 느낌) — 시각 전용
+  const [chant, setChant] = useState(true); // TTS: 한 글자씩 또박또박 외치기 — 기본 켜짐
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [age, setAge] = useState('adult');
   const [voiceURI, setVoiceURI] = useState(''); // '' = 성별 자동추천
@@ -59,7 +60,8 @@ export default function BoardPage() {
   const otherVoices = voices.filter((v) => !v.lang.toLowerCase().startsWith('ko'));
 
   const display = text.trim() || '여기에 적은 문구가 전광판에 떠요';
-  const shownText = chant ? [...display].filter((c) => c !== ' ').join(' ') : display;
+  // 전광판 시각 텍스트는 TTS(chant)와 무관 — 별도 '글자 띄우기' 옵션으로만 띄운다
+  const shownText = spaceOut ? [...display].filter((c) => c !== ' ').join(' ') : display;
 
   const pickVoice = (): SpeechSynthesisVoice | undefined => {
     if (voiceURI) { const v = voices.find((x) => x.voiceURI === voiceURI); if (v) return v; }
@@ -189,6 +191,9 @@ export default function BoardPage() {
         <span className="field-label">효과</span>
         <div className="seg">{EFFECTS.map((e) => (
           <button key={e.id} type="button" className={effect === e.id ? 'on' : ''} onClick={() => setEffect(e.id)}>{e.label}</button>))}</div>
+        <label className="check" style={{ marginTop: 8 }}>
+          <input type="checkbox" checked={spaceOut} onChange={(e) => setSpaceOut(e.target.checked)} /> 글자 띄우기 (부·정·선·거)
+        </label>
         <span className="field-label">전체화면 방향</span>
         <div className="seg">
           <button type="button" className={rot === 'left' ? 'on' : ''} onClick={() => setRot('left')}>↺ 가로(왼쪽)</button>
