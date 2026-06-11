@@ -129,18 +129,18 @@ export default function MapPage() {
           {/* 타일 약관 준수: 기본은 OSM 표준(무료 공개 허용·라벨 내장),
               위성은 보조 레이어. CARTO는 그랜트 전용이라 제거함 */}
           <LayersControl position="topright">
-            <LayersControl.BaseLayer checked name="위성 (실사)">
+            <LayersControl.BaseLayer checked name="일반 지도">
               <TileLayer
-                attribution='&copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
                 maxZoom={19}
                 eventHandlers={{ tileerror: retryTile }}
               />
             </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="일반 지도">
+            <LayersControl.BaseLayer name="위성 (실사)">
               <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
-                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 maxZoom={19}
                 eventHandlers={{ tileerror: retryTile }}
               />
