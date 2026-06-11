@@ -64,11 +64,10 @@ public class CctvProxyController {
         if (!isPublicFetchable(u)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
         try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create(u))
-                    .timeout(Duration.ofSeconds(12))
-                    .header("User-Agent", "rally-map-cctv-proxy")
-                    .GET().build();
-            HttpResponse<byte[]> res = client.send(req, HttpResponse.BodyHandlers.ofByteArray());
+            // ITS CCTV는 302로 실제 스트림(다른 포트)으로 리다이렉트한다. 자동 추적을 끄고
+            // 우리가 직접 따라가되 매 홉마다 egress 필터로 사설 주소를 차단(SSRF 방지).
+            HttpResponse<byte[]> res = fetchFollowingSafeRedirects(u);
+            if (res == null) return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
             if (res.statusCode() >= 400) {
                 return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
             }
@@ -122,6 +121,32 @@ public class CctvProxyController {
             }
         }
         return out.toString();
+    }
+
+    /**
+     * 리다이렉트를 직접(최대 5홉) 따라가며 매 홉마다 egress 필터를 통과한 URL만 가져온다.
+     * HttpClient의 자동 추적(Redirect.NORMAL)은 내부망으로의 우회를 검사 없이 따라가므로 쓰지 않는다.
+     * 사설 주소로 리다이렉트되거나 홉이 과하면 null 반환(호출부가 502 처리).
+     */
+    private HttpResponse<byte[]> fetchFollowingSafeRedirects(String startUrl) throws Exception {
+        String current = startUrl;
+        for (int hop = 0; hop < 5; hop++) {
+            if (!isPublicFetchable(current)) return null;
+            HttpRequest req = HttpRequest.newBuilder(URI.create(current))
+                    .timeout(Duration.ofSeconds(12))
+                    .header("User-Agent", "rally-map-cctv-proxy")
+                    .GET().build();
+            HttpResponse<byte[]> res = client.send(req, HttpResponse.BodyHandlers.ofByteArray());
+            int sc = res.statusCode();
+            if (sc == 301 || sc == 302 || sc == 303 || sc == 307 || sc == 308) {
+                String loc = res.headers().firstValue("location").orElse(null);
+                if (loc == null || loc.isBlank()) return res;
+                current = URI.create(current).resolve(loc).toString();
+                continue;
+            }
+            return res; // 최종 응답
+        }
+        return null; // 리다이렉트 과다 — 루프 방지
     }
 
     /**
