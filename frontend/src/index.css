@@ -236,9 +236,9 @@ main { padding: 16px 14px; }
 .anthem-hud { display: flex; gap: 16px; justify-content: center; margin: 4px 0 10px; color: var(--muted); }
 .anthem-hud b { color: var(--accent); font-size: 1.05em; }
 .anthem-track { position: relative; display: flex; flex-direction: column; height: 54vh; min-height: 340px;
-  border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
-  background: linear-gradient(180deg, var(--accent-soft), var(--card)); }
-.anthem-fall { position: relative; flex: 1; overflow: hidden; }
+  border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--card); }
+.anthem-fall { position: relative; flex: 1; overflow: hidden; background: linear-gradient(180deg, #ffffff, #e9f0fb); }
+.taegeuk-bg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .2; pointer-events: none; }
 .anthem-tile { position: absolute; top: -46px; height: 44px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 1.05rem;
   border-radius: 9px; border: 2px solid rgba(255,255,255,.55); background: linear-gradient(180deg, #5b83ff, #2754d8);
