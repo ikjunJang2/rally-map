@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.HtmlUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -104,8 +105,10 @@ public class YouTubeService {
                     String videoId = item.path("id").path("videoId").asText("");
                     if (videoId.isEmpty()) continue;
                     JsonNode sn = item.path("snippet");
-                    String title = sn.path("title").asText("(제목 없음)");
-                    String channel = sn.path("channelTitle").asText(null);
+                    // YouTube는 제목·채널명을 HTML 엔티티(&quot; &#39; &amp; 등)로 인코딩해 주므로 디코딩
+                    String title = HtmlUtils.htmlUnescape(sn.path("title").asText("(제목 없음)"));
+                    String rawChannel = sn.path("channelTitle").asText(null);
+                    String channel = rawChannel == null ? null : HtmlUtils.htmlUnescape(rawChannel);
                     if (isExcluded(channel)) continue;
                     String thumb = sn.path("thumbnails").path("medium").path("url").asText(null);
                     String channelId = sn.path("channelId").asText(null);

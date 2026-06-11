@@ -10,6 +10,18 @@ const CCTV_LINKS = [
   { label: '국가교통정보센터 CCTV 지도', url: 'https://www.its.go.kr/map/cctv' },
 ];
 
+const NAMED_ENTITIES: Record<string, string> = { quot: '"', amp: '&', apos: "'", lt: '<', gt: '>', nbsp: ' ' };
+/** YouTube 제목의 HTML 엔티티(&quot; &#39; 등) 디코딩 — DOM 미사용(XSS 안전) */
+function decodeEntities(s: string): string {
+  return s.replace(/&(#\d+|#x[0-9a-fA-F]+|\w+);/g, (m, e: string) => {
+    if (e[0] === '#') {
+      const code = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+    }
+    return NAMED_ENTITIES[e] ?? m;
+  });
+}
+
 /** 12345 → "1.2만", 987 → "987" */
 function formatViewers(n: number): string {
   if (n >= 10_000) return `${(n / 10_000).toFixed(1)}만`;
@@ -38,14 +50,14 @@ function StreamCard({ s }: { s: Stream }) {
           {s.source === 'YOUTUBE'
             ? <span className="src-badge yt-badge">▶ YouTube</span>
             : <span className="src-badge">운영진 등록</span>}
-          {s.title}
+          {decodeEntities(s.title)}
         </h3>
         {s.channel && (
           <p className="yt-channel">
             {s.channelThumbnail && (
               <img className="ch-avatar" src={s.channelThumbnail} alt="" loading="lazy" />
             )}
-            <span className="ch-name">{s.channel}</span>
+            <span className="ch-name">{decodeEntities(s.channel)}</span>
             {s.live && s.viewers != null && (
               <span className="viewers">
                 <Eye size={13} aria-hidden="true" /> {formatViewers(s.viewers)}명 시청
