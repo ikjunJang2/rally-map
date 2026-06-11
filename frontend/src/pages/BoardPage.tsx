@@ -81,7 +81,7 @@ export default function BoardPage() {
       <p className="meta" style={{ textAlign: 'center', margin: '4px 0 10px' }}>전광판을 누르면 전체화면 — 폰을 들어 보여주세요.</p>
 
       <div className="card post-form">
-        <input maxLength={60} placeholder="전광판에 띄울 문구 (예: 투표지 공개하라!)" value={text}
+        <input maxLength={60} placeholder="전광판에 띄울 문구 (예: 부정선거 재선거!)" value={text}
                onChange={(e) => setText(e.target.value)} aria-label="전광판 문구" />
         <span className="field-label">글자색</span>
         <div className="swatches">{COLORS.map((c) => (
