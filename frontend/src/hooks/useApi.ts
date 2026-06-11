@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { AdminReport, AdminShareItem, AppSetting, CctvResponse, Comment, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
+import type { AdminReport, AdminShareItem, AppSetting, CctvResponse, Comment, LawDetail, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -87,6 +87,16 @@ export function useLawSearch(q: string) {
     queryFn: () => api(`/laws?q=${encodeURIComponent(q)}`),
     enabled: q.trim().length > 0,
     staleTime: 10 * 60_000, // 법령은 자주 안 바뀜
+  });
+}
+
+/** 법령 본문(조문) — 검색 결과를 펼칠 때만 호출 */
+export function useLawDetail(mst: string) {
+  return useQuery<LawDetail>({
+    queryKey: ['law-detail', mst],
+    queryFn: () => api(`/laws/${mst}`),
+    enabled: mst.length > 0,
+    staleTime: 30 * 60_000,
   });
 }
 

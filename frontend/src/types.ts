@@ -79,7 +79,7 @@ export interface CctvResponse {
 
 export interface Law {
   name: string;
-  link: string;
+  mst: string;
   dept: string;
   date: string;
 }
@@ -87,6 +87,17 @@ export interface Law {
 export interface LawResponse {
   enabled: boolean;
   laws: Law[];
+}
+
+export interface LawArticle {
+  no: string;
+  content: string;
+}
+
+export interface LawDetail {
+  enabled: boolean;
+  name: string;
+  articles: LawArticle[];
 }
 
 /** 관리자 외부 연동 키 설정 */

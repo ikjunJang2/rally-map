@@ -324,6 +324,15 @@ main { padding: 16px 14px; }
   .eff-scroll .board-text { position: static; left: auto; transform: none; }
 }
 
+/* 법령 검색 결과 — 클릭 시 앱 안에서 조문 펼쳐보기 */
+.law-result { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0;
+  cursor: pointer; color: inherit; font: inherit; }
+.law-result:disabled { cursor: default; opacity: .6; }
+.law-result h3 { margin: 0 0 4px; }
+.law-detail { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;
+  max-height: 55vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.law-article { white-space: pre-wrap; word-break: break-word; font-size: .9rem; line-height: 1.65; margin: 0 0 12px; }
+
 /* 관리자 좌표 찍기 미니맵 */
 .pick-map { height: 200px; border-radius: 12px; border: 1px solid var(--border); z-index: 1; }
 

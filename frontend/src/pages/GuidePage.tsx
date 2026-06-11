@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { BookOpen, Scale, SearchIcon, ExternalLink, Landmark } from 'lucide-react';
-import { useLawSearch } from '../hooks/useApi';
+import { useLawSearch, useLawDetail } from '../hooks/useApi';
 import Skeleton from '../components/Skeleton';
 
 // ── 핵심 조문 (원문 인용 — 법령은 저작권 보호 대상 아님) ──
@@ -37,9 +37,39 @@ function lawGoKrSearch(q: string) {
   return `https://www.law.go.kr/lsSc.do?menuId=1&subMenuId=15&query=${encodeURIComponent(q)}`;
 }
 
+/** 검색 결과를 펼치면 law.go.kr 본문을 받아 앱 안에서 조문을 보여준다 (외부 링크 이동 불필요) */
+function LawDetailView({ mst, fallbackName }: { mst: string; fallbackName: string }) {
+  const { data, isLoading, isError } = useLawDetail(mst);
+
+  if (isLoading) return <div className="law-detail"><Skeleton lines={5} /></div>;
+
+  if (isError || !data?.enabled || data.articles.length === 0) {
+    return (
+      <div className="law-detail">
+        <p className="meta">본문을 불러오지 못했어요. 잠시 후 다시 시도하거나 원문에서 확인해주세요.</p>
+        <a className="navlink" href={lawGoKrSearch(fallbackName)} target="_blank" rel="noreferrer">
+          <ExternalLink size={14} aria-hidden="true" /> 국가법령정보센터에서 보기
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="law-detail">
+      {data.articles.map((a, i) => (
+        <p key={a.no || i} className="law-article">{a.content}</p>
+      ))}
+      <a className="navlink" href={lawGoKrSearch(data.name || fallbackName)} target="_blank" rel="noreferrer">
+        <ExternalLink size={14} aria-hidden="true" /> 원문(law.go.kr)에서 보기
+      </a>
+    </div>
+  );
+}
+
 function LawSection() {
   const [input, setInput] = useState('');
   const [query, setQuery] = useState('');
+  const [openMst, setOpenMst] = useState('');
   const { data, isLoading } = useLawSearch(query);
 
   const submit = (e: FormEvent) => {
@@ -61,15 +91,21 @@ function LawSection() {
 
       {isLoading && <Skeleton lines={3} />}
 
-      {/* 서버 검색 결과 (LAW_OC 설정 시) */}
-      {data?.enabled && data.laws.map((l) => (
-        <a key={l.link || l.name} className="card streamcard" href={l.link || lawGoKrSearch(l.name)}
-           target="_blank" rel="noreferrer">
-          <h3><Scale size={16} className="ic accent" aria-hidden="true" />{l.name}</h3>
-          <p className="meta">{l.dept}{l.date && ` · 시행 ${l.date}`}</p>
-          <span className="navlink"><ExternalLink size={14} aria-hidden="true" /> 법령 전문 보기</span>
-        </a>
-      ))}
+      {/* 서버 검색 결과 (LAW_OC 설정 시) — 클릭하면 앱 안에서 조문 펼쳐보기 */}
+      {data?.enabled && data.laws.map((l) => {
+        const open = openMst === l.mst && !!l.mst;
+        return (
+          <div key={l.mst || l.name} className="card">
+            <button type="button" className="law-result" aria-expanded={open}
+                    onClick={() => setOpenMst(open ? '' : l.mst)} disabled={!l.mst}>
+              <h3><Scale size={16} className="ic accent" aria-hidden="true" />{l.name}</h3>
+              <p className="meta">{l.dept}{l.date && ` · 시행 ${l.date}`}</p>
+              <span className="navlink">{open ? '접기 ▲' : '조문 펼쳐보기 ▼'}</span>
+            </button>
+            {open && <LawDetailView mst={l.mst} fallbackName={l.name} />}
+          </div>
+        );
+      })}
       {data?.enabled && query && data.laws.length === 0 && !isLoading && (
         <div className="card"><p className="meta">'{query}' 검색 결과가 없어요. 법령 이름으로 검색해보세요.</p></div>
       )}
