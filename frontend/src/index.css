@@ -254,8 +254,17 @@ main { padding: 16px 14px; }
   display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12px; font-weight: 800; font-size: 1.15rem;
   cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; transition: background .06s, transform .06s; }
 .anthem-key:active, .anthem-key.on { background: var(--accent); color: #fff; transform: translateY(2px); }
-.anthem-controls { display: flex; gap: 10px; justify-content: center; margin: 14px 0; }
+.anthem-controls { display: flex; gap: 10px; justify-content: center; margin: 14px 0; flex-wrap: wrap; }
 .anthem-controls button { display: inline-flex; align-items: center; gap: 6px; }
+/* 보조 버튼(들어보기·다시) — 기본 회색 대신 깔끔한 secondary 스타일 */
+.anthem-controls button:not(.primary) {
+  padding: 11px 18px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--card); color: var(--text); font-weight: 700; font-size: 1rem; cursor: pointer;
+  transition: background .08s, border-color .08s;
+}
+.anthem-controls button:not(.primary):hover { border-color: var(--accent); }
+.anthem-controls button:not(.primary):active { background: var(--accent-soft); }
+.anthem-controls button:not(.primary):disabled { opacity: .45; cursor: default; border-color: var(--border); background: var(--card); }
 
 /* 악기 선택 */
 .anthem-instr { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 0 0 10px; }

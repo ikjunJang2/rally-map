@@ -95,7 +95,7 @@ function PoiForm({ form, set, onPick, submit, busy, onCancel }: {
       <MapContainer center={center} zoom={16} className="pick-map" scrollWheelZoom>
         <TileLayer
           attribution='&copy; Esri'
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          url="/tiles/esri/{z}/{y}/{x}"
           maxZoom={19}
         />
         <LocationPicker lat={valid ? latNum : null} lng={valid ? lngNum : null} onPick={onPick} />

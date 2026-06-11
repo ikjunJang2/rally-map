@@ -26,20 +26,13 @@ export default defineConfig({
         // 지도 타일·외부 CDN은 한 번 본 영역을 캐시 → 현장 통신 장애에도 지도 표시
         runtimeCaching: [
           {
-            // OSM 타일 정책상 브라우저 표준 캐싱 범위 내 사용 (2일)
-            urlPattern: /^https:\/\/tile\.openstreetmap\.org\/.*/,
+            // 지도 타일은 동일출처 프록시(/tiles/…) — 200 응답만 캐시(실패 타일 캐시 방지)
+            urlPattern: /\/tiles\/.*/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'tiles-osm',
-              expiration: { maxEntries: 300, maxAgeSeconds: 2 * 24 * 3600 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/server\.arcgisonline\.com\/.*/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'tiles-esri',
-              expiration: { maxEntries: 200, maxAgeSeconds: 2 * 24 * 3600 },
+              cacheName: 'tiles',
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 400, maxAgeSeconds: 7 * 24 * 3600 },
             },
           },
           {
@@ -75,6 +68,17 @@ export default defineConfig({
     proxy: {
       // 개발 중 백엔드(Spring Boot)로 API 프록시
       '/api': 'http://localhost:8080',
+      // 지도 타일 프록시 (운영 nginx와 동일한 동일출처 경로를 개발에서도 재현)
+      '/tiles/osm': {
+        target: 'https://tile.openstreetmap.org',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/tiles\/osm/, ''),
+      },
+      '/tiles/esri': {
+        target: 'https://server.arcgisonline.com',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/tiles\/esri/, '/ArcGIS/rest/services/World_Imagery/MapServer/tile'),
+      },
     },
   },
 });

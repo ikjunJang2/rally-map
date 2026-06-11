@@ -132,7 +132,7 @@ export default function MapPage() {
             <LayersControl.BaseLayer checked name="일반 지도">
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
-                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                url="/tiles/osm/{z}/{x}/{y}.png"
                 maxZoom={19}
                 eventHandlers={{ tileerror: retryTile }}
               />
@@ -140,7 +140,7 @@ export default function MapPage() {
             <LayersControl.BaseLayer name="위성 (실사)">
               <TileLayer
                 attribution='&copy; Esri — Source: Esri, Maxar, Earthstar Geographics'
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                url="/tiles/esri/{z}/{y}/{x}"
                 maxZoom={19}
                 eventHandlers={{ tileerror: retryTile }}
               />
