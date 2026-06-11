@@ -130,7 +130,7 @@ export default function Layout() {
 
       <main id="main" tabIndex={-1} className={pageAnim}>
         <NoticeBoard notices={notices ?? []} />
-        <ErrorBoundary>
+        <ErrorBoundary resetKey={pathname}>
           <Outlet />
         </ErrorBoundary>
       </main>

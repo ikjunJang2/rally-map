@@ -34,6 +34,8 @@ export default function BoardPage() {
 
   const previewRef = useRef<HTMLDivElement>(null);
   const repeatRef = useRef(repeat);
+  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const genRef = useRef(0); // 발화 세대 — 늦게 도착한 onend/워치독이 새 발화를 건드리지 않게
   const ttsOk = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
   useEffect(() => { repeatRef.current = repeat; }, [repeat]);
@@ -42,7 +44,11 @@ export default function BoardPage() {
     const load = () => setVoices(window.speechSynthesis.getVoices());
     load();
     window.speechSynthesis.onvoiceschanged = load;
-    return () => { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; };
+    return () => {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.onvoiceschanged = null;
+      if (watchdogRef.current) clearInterval(watchdogRef.current);
+    };
   }, [ttsOk]);
 
   const koVoices = voices.filter((v) => v.lang.toLowerCase().startsWith('ko'));
@@ -60,9 +66,34 @@ export default function BoardPage() {
     return koVoices.find((v) => want.test(v.name)) ?? koVoices[0];
   };
 
+  const clearWatchdog = () => { if (watchdogRef.current) { clearInterval(watchdogRef.current); watchdogRef.current = null; } };
+
+  // 한 번의 발화가 끝났을 때 — 반복이면 다시, 아니면 멈춤. gen으로 옛 콜백 무시.
+  const finish = (gen: number) => {
+    if (gen !== genRef.current) return;
+    clearWatchdog();
+    if (repeatRef.current) speak();
+    else setSpeaking(false);
+  };
+
+  // Chrome은 큐가 길거나 시간이 길면 마지막 utterance의 onend를 누락해 반복이 멈춘다.
+  // 워치독: 발화가 시작됐다가 끝난 걸 직접 감지해(onend 없이도) 마무리한다.
+  const startWatchdog = (gen: number) => {
+    clearWatchdog();
+    let started = false;
+    const id = setInterval(() => {
+      if (gen !== genRef.current) { clearInterval(id); return; } // 자기 세대만 정리
+      const s = window.speechSynthesis;
+      if (s.speaking || s.pending) { started = true; return; }
+      if (started) finish(gen); // 끝났는데 onend가 안 옴 → 직접 마무리
+    }, 1500);
+    watchdogRef.current = id;
+  };
+
   const speak = () => {
     if (!ttsOk || !text.trim()) return;
     window.speechSynthesis.cancel();
+    const gen = ++genRef.current;
     const preset = VOICE_PRESETS[`${gender}-${age}`] ?? { pitch: 1, rate: 1 };
     const voice = pickVoice();
     const make = (s: string) => {
@@ -76,17 +107,22 @@ export default function BoardPage() {
       const chars = [...text.trim()].filter((c) => c.trim()); // 글자만(공백 제외)
       chars.forEach((c, i) => {
         const u = make(c);
-        if (i === chars.length - 1) { u.onend = onDone; u.onerror = () => setSpeaking(false); }
+        if (i === chars.length - 1) { u.onend = () => finish(gen); u.onerror = () => finish(gen); }
         window.speechSynthesis.speak(u);
       });
     } else {
       const u = make(text.trim());
-      u.onend = onDone; u.onerror = () => setSpeaking(false);
+      u.onend = () => finish(gen); u.onerror = () => finish(gen);
       window.speechSynthesis.speak(u);
     }
+    startWatchdog(gen);
   };
-  const onDone = () => { if (repeatRef.current) speak(); else setSpeaking(false); };
-  const stop = () => { setRepeat(false); repeatRef.current = false; window.speechSynthesis.cancel(); setSpeaking(false); };
+  const stop = () => {
+    genRef.current++; // 진행 중 발화의 onend·워치독 무효화
+    clearWatchdog();
+    setRepeat(false); repeatRef.current = false;
+    window.speechSynthesis.cancel(); setSpeaking(false);
+  };
   const fullscreen = () => { previewRef.current?.requestFullscreen?.().catch(() => {}); };
 
   return (

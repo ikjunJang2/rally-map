@@ -85,11 +85,10 @@ public class PostController {
         return result.map(PostView::of);
     }
 
-    /** 인기글 TOP 3 — 하트 1개 이상, 하트순 (임시조치 글 제외) */
+    /** 인기글 TOP 3 — 하트 1개 이상, 하트순 (임시조치 글은 쿼리에서 제외) */
     @GetMapping("/popular")
     public List<PostView> popular() {
-        return posts.findPopular(PageRequest.of(0, POPULAR_COUNT)).stream()
-                .filter(p -> !p.isBlocked())
+        return posts.findPopular(Instant.now(), PageRequest.of(0, POPULAR_COUNT)).stream()
                 .map(PostView::of)
                 .toList();
     }

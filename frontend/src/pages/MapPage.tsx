@@ -178,11 +178,15 @@ export default function MapPage() {
                     onClick={() => focusPoi({ id: loc.poiId, lat: loc.lat, lng: loc.lng })}>
               <h3>{loc.name}</h3>
               <div className="share-items">
-                {loc.items.map((it) => (
-                  <span key={it.id} className={`share-chip ${SHARE_STATUS[it.status].cls}`}>
-                    {it.name} · {SHARE_STATUS[it.status].label}
-                  </span>
-                ))}
+                {loc.items.map((it) => {
+                  // 서버가 예상 밖 상태를 주더라도 크래시하지 않게 폴백 (TYPE_INFO와 동일 패턴)
+                  const st = SHARE_STATUS[it.status] ?? { label: it.status, cls: '' };
+                  return (
+                    <span key={it.id} className={`share-chip ${st.cls}`}>
+                      {it.name} · {st.label}
+                    </span>
+                  );
+                })}
               </div>
               <span className="navlink">지도에서 위치 보기 ↑</span>
             </button>

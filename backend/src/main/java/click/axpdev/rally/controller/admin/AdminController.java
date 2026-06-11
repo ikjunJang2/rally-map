@@ -64,8 +64,9 @@ public class AdminController {
     public ResponseEntity<Poi> updatePoi(@PathVariable Long id, @Valid @RequestBody PoiRequest req) {
         return pois.findById(id)
                 .map(p -> {
-                    p.update(req.type(), req.name(), req.lat(), req.lng(), req.memo(),
-                            req.active() == null || req.active());
+                    // active 미지정 시 강제 true가 아니라 현재 상태 유지 (숨김 POI가 수정만으로 다시 노출되는 것 방지)
+                    boolean active = req.active() == null ? p.isActive() : req.active();
+                    p.update(req.type(), req.name(), req.lat(), req.lng(), req.memo(), active);
                     return ResponseEntity.ok(pois.save(p));
                 })
                 .orElse(ResponseEntity.notFound().build());
