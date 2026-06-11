@@ -257,6 +257,27 @@ main { padding: 16px 14px; }
 .anthem-controls { display: flex; gap: 10px; justify-content: center; margin: 14px 0; }
 .anthem-controls button { display: inline-flex; align-items: center; gap: 6px; }
 
+/* 악기 선택 */
+.anthem-instr { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 0 0 10px; }
+.anthem-instr button { padding: 6px 14px; border: 1px solid var(--border); background: var(--card); color: var(--text);
+  border-radius: 999px; font-weight: 700; font-size: .92rem; cursor: pointer; }
+.anthem-instr button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* 무궁화 축하 효과 */
+.anthem-flowers { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
+.flower { position: absolute; top: 0; }
+.flower svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2)); animation: flowerFall var(--dur, 1.8s) ease-in forwards; }
+@keyframes flowerFall {
+  0% { transform: translateY(-30px) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  100% { transform: translateY(600px) rotate(var(--rot, 360deg)); opacity: .8; }
+}
+.anthem-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 4;
+  background: rgba(199,23,76,.95); color: #fff; font-weight: 800; padding: 8px 16px; border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.28); white-space: nowrap; animation: bannerPop .25s ease; }
+@keyframes bannerPop { from { transform: translateX(-50%) scale(.8); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .flower svg { animation-duration: .8s; } }
+
 /* 관리자 좌표 찍기 미니맵 */
 .pick-map { height: 200px; border-radius: 12px; border: 1px solid var(--border); z-index: 1; }
 

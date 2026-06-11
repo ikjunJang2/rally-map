@@ -137,7 +137,7 @@ export default function Layout() {
         시민이 시민을 위해 만든 페이지 · 추적기 없음 · 오픈소스
         <p className="footer-links">
           <Link to="/feedback">개발자에게 바란다</Link> · <Link to="/privacy">개인정보처리방침</Link> ·{' '}
-          <Link to="/terms">이용약관</Link> · <Link to="/anthem">🎹 애국가 건반</Link>
+          <Link to="/terms">이용약관</Link>
         </p>
       </footer>
 
