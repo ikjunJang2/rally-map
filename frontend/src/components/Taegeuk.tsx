@@ -19,7 +19,18 @@ function Bars({ pattern }: { pattern: ('s' | 'b')[] }) {
   );
 }
 
-export default function Taegeuk({ className }: { className?: string }) {
+export default function Taegeuk({ className, badge = false }: { className?: string; badge?: boolean }) {
+  if (badge) {
+    // 헤더 아이콘용 — 태극(적청)만, 정사각 뷰박스
+    return (
+      <svg className={className} viewBox="0 0 100 100" aria-hidden="true">
+        <g transform="translate(50 50) rotate(-33.69)">
+          <path d="M-30,0 A30,30 0 0,1 30,0 A15,15 0 0,1 0,0 A15,15 0 0,0 -30,0 Z" fill="#CD2E3A" />
+          <path d="M-30,0 A30,30 0 0,0 30,0 A15,15 0 0,0 0,0 A15,15 0 0,1 -30,0 Z" fill="#0047A0" />
+        </g>
+      </svg>
+    );
+  }
   return (
     <svg className={className} viewBox="0 0 360 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       {/* 태극 — 적(양)이 위, 청(음)이 아래, 33.69° 기울임 */}

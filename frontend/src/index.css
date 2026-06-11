@@ -93,7 +93,7 @@ body.dark { background: #07080c; }
 }
 body.dark .app-header .presence { color: #6fd49a; }
 .toggles { display: flex; align-items: center; gap: 6px; }
-.toggles button, .toggles .admin-link {
+.toggles button, .toggles .admin-link, .toggles .game-link {
   /* 44×44px 최소 터치 타깃 (WCAG 2.5.5) */
   min-width: 44px;
   min-height: 44px;
@@ -112,6 +112,8 @@ body.dark .app-header .presence { color: #6fd49a; }
   border-color: var(--accent);
   color: #fff;
 }
+.toggles .game-link { border-color: var(--accent); }
+.header-taegeuk { width: 26px; height: 26px; display: block; }
 
 /* 키보드 사용자용 본문 바로가기 — 포커스 시에만 표시 */
 .skip-link {
@@ -239,11 +241,12 @@ main { padding: 16px 14px; }
   border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--card); }
 .anthem-fall { position: relative; flex: 1; overflow: hidden; background: linear-gradient(180deg, #ffffff, #e9f0fb); }
 .taegeuk-bg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .2; pointer-events: none; }
-.anthem-tile { position: absolute; top: -46px; height: 44px; box-sizing: border-box;
-  display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 1.05rem;
+.anthem-tile { position: absolute; top: 0; box-sizing: border-box; will-change: transform;
+  display: flex; align-items: flex-start; justify-content: center; padding-top: 6px; color: #fff; font-weight: 800; font-size: 1.05rem;
   border-radius: 9px; border: 2px solid rgba(255,255,255,.55); background: linear-gradient(180deg, #5b83ff, #2754d8);
-  box-shadow: 0 2px 8px rgba(20,26,40,.3); animation-name: anthemFall; animation-timing-function: linear; animation-fill-mode: both; }
-@keyframes anthemFall { from { top: -46px; } to { top: 100%; } }
+  box-shadow: 0 2px 8px rgba(20,26,40,.3); }
+.anthem-tile.got { background: linear-gradient(180deg, #46c46a, #1f9e46); opacity: .85; }
+.anthem-tile.miss { background: linear-gradient(180deg, #b9bfcd, #8b91a3); opacity: .5; }
 .anthem-hitline { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 .anthem-keys { display: flex; flex: 0 0 96px; height: 96px; }
 .anthem-key { flex: 1; box-sizing: border-box; border: 1px solid var(--border); border-top: 3px solid var(--accent);
