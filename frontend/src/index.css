@@ -232,6 +232,28 @@ main { padding: 16px 14px; }
 .page-anim.from-left  { animation: pageFromLeft .22s ease-out; }
 @media (prefers-reduced-motion: reduce) { .page-anim.from-right, .page-anim.from-left { animation: none; } }
 
+/* 애국가 건반 게임 */
+.anthem-hud { display: flex; gap: 16px; justify-content: center; margin: 4px 0 10px; color: var(--muted); }
+.anthem-hud b { color: var(--accent); font-size: 1.05em; }
+.anthem-track { position: relative; display: flex; flex-direction: column; height: 54vh; min-height: 340px;
+  border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+  background: linear-gradient(180deg, var(--accent-soft), var(--card)); }
+.anthem-fall { position: relative; flex: 1; overflow: hidden; }
+.anthem-tile { position: absolute; top: -46px; height: 44px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 1.05rem;
+  border-radius: 9px; border: 2px solid rgba(255,255,255,.55); background: linear-gradient(180deg, #5b83ff, #2754d8);
+  box-shadow: 0 2px 8px rgba(20,26,40,.3); animation-name: anthemFall; animation-timing-function: linear; animation-fill-mode: both; }
+@keyframes anthemFall { from { top: -46px; } to { top: 100%; } }
+.anthem-hitline { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.anthem-keys { display: flex; flex: 0 0 96px; height: 96px; }
+.anthem-key { flex: 1; box-sizing: border-box; border: 1px solid var(--border); border-top: 3px solid var(--accent);
+  border-radius: 0 0 8px 8px; background: var(--card); color: var(--text);
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12px; font-weight: 800; font-size: 1.15rem;
+  cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; transition: background .06s, transform .06s; }
+.anthem-key:active, .anthem-key.on { background: var(--accent); color: #fff; transform: translateY(2px); }
+.anthem-controls { display: flex; gap: 10px; justify-content: center; margin: 14px 0; }
+.anthem-controls button { display: inline-flex; align-items: center; gap: 6px; }
+
 /* 관리자 좌표 찍기 미니맵 */
 .pick-map { height: 200px; border-radius: 12px; border: 1px solid var(--border); z-index: 1; }
 
