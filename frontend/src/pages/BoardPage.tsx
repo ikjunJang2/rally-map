@@ -31,6 +31,8 @@ export default function BoardPage() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [repeat, setRepeat] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [rot, setRot] = useState<'none' | 'left' | 'right'>('left'); // 전체화면 회전 방향
+  const [isFs, setIsFs] = useState(false);
 
   const previewRef = useRef<HTMLDivElement>(null);
   const repeatRef = useRef(repeat);
@@ -123,16 +125,49 @@ export default function BoardPage() {
     setRepeat(false); repeatRef.current = false;
     window.speechSynthesis.cancel(); setSpeaking(false);
   };
-  const fullscreen = () => { previewRef.current?.requestFullscreen?.().catch(() => {}); };
+  // 전체화면 진입 시 가로 방향으로 — 안드로이드는 OS 방향 잠금이 먹고(성공 시 CSS 회전은
+  // orientation:portrait 미디어쿼리가 자동 해제), iOS·데스크톱은 실패해 CSS 회전으로 폴백.
+  const lockLandscape = () => {
+    if (rot === 'none') return;
+    const o = window.screen?.orientation as (ScreenOrientation & { lock?: (s: string) => Promise<void> }) | undefined;
+    if (!o?.lock) return;
+    const want = rot === 'right' ? 'landscape-primary' : 'landscape-secondary';
+    o.lock(want).catch(() => o.lock?.('landscape').catch(() => {}));
+  };
+
+  const toggleFullscreen = () => {
+    const el = previewRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    } else {
+      Promise.resolve(el.requestFullscreen?.()).then(lockLandscape).catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    const onFs = () => {
+      const fs = !!document.fullscreenElement;
+      setIsFs(fs);
+      if (!fs) (window.screen?.orientation as (ScreenOrientation & { unlock?: () => void }) | undefined)?.unlock?.();
+    };
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
 
   return (
     <section aria-label="전광판과 소리내기">
       <h2 className="tab-title"><Megaphone size={20} className="ic accent" aria-hidden="true" />전광판 · 소리내기</h2>
 
-      <div className={`board-preview eff-${effect}`} ref={previewRef} style={{ background: bg }} onClick={fullscreen}>
-        <span className="board-text" style={{ color }}>{shownText}</span>
+      <div className={`board-preview eff-${effect} rot-${rot}`} ref={previewRef} style={{ background: bg }} onClick={toggleFullscreen}>
+        <div className="board-stage">
+          <span className="board-text" style={{ color }}>{shownText}</span>
+          {isFs && <span className="board-exit-hint">화면을 누르면 닫혀요</span>}
+        </div>
       </div>
-      <p className="meta" style={{ textAlign: 'center', margin: '4px 0 10px' }}>전광판을 누르면 전체화면 — 폰을 들어 보여주세요.</p>
+      <p className="meta" style={{ textAlign: 'center', margin: '4px 0 10px' }}>
+        전광판을 누르면 전체화면 · 다시 누르면 닫힘 — {rot === 'none' ? '폰을 세워서' : '폰을 가로로 돌려'} 보여주세요.
+      </p>
 
       <div className="card post-form">
         <input maxLength={60} placeholder="전광판에 띄울 문구 (예: 부정선거 재선거!)" value={text}
@@ -146,7 +181,13 @@ export default function BoardPage() {
         <span className="field-label">효과</span>
         <div className="seg">{EFFECTS.map((e) => (
           <button key={e.id} type="button" className={effect === e.id ? 'on' : ''} onClick={() => setEffect(e.id)}>{e.label}</button>))}</div>
-        <button type="button" className="primary" style={{ marginTop: 10 }} onClick={fullscreen}><Maximize size={16} aria-hidden="true" /> 전체화면으로 보여주기</button>
+        <span className="field-label">전체화면 방향</span>
+        <div className="seg">
+          <button type="button" className={rot === 'left' ? 'on' : ''} onClick={() => setRot('left')}>↺ 가로(왼쪽)</button>
+          <button type="button" className={rot === 'right' ? 'on' : ''} onClick={() => setRot('right')}>가로(오른쪽) ↻</button>
+          <button type="button" className={rot === 'none' ? 'on' : ''} onClick={() => setRot('none')}>세로</button>
+        </div>
+        <button type="button" className="primary" style={{ marginTop: 10 }} onClick={toggleFullscreen}><Maximize size={16} aria-hidden="true" /> 전체화면으로 보여주기</button>
       </div>
 
       <div className="card post-form">
