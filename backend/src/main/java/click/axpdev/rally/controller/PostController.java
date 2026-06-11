@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -150,11 +151,16 @@ public class PostController {
 
     public record LikeRequest(@NotBlank @Size(max = 64) String sid) {}
 
-    /** 하트 토글 — 세션당 1회. 원본 sid는 저장하지 않고 해시만 */
+    /**
+     * 하트 토글 — 세션당 1회. 원본 sid는 저장하지 않고 해시만.
+     * 메서드 전역 @Transactional을 두지 않는 이유: 동시 더블탭 시 INSERT가 유니크 제약에
+     * 걸려 DataIntegrityViolationException이 나는데, 하나의 트랜잭션 안이면 그 예외가
+     * 트랜잭션을 rollback-only로 만들어 뒤따르는 count 조회까지 깨진다. 호출별 트랜잭션으로
+     * 두면 실패한 INSERT만 독립적으로 롤백되고 정상 처리(중복 무시)로 이어진다.
+     */
     @PostMapping("/{id}/like")
-    @Transactional
     public ResponseEntity<?> toggleLike(@PathVariable Long id, @Valid @RequestBody LikeRequest req) {
-        if (!posts.existsById(id)) return ResponseEntity.notFound().build();
+        if (!posts.existsByIdAndDeletedFalse(id)) return ResponseEntity.notFound().build();
         String sidHash = hash("like:" + req.sid());
         boolean liked;
         Optional<PostLike> existing = likes.findByPostIdAndSidHash(id, sidHash);
@@ -162,7 +168,11 @@ public class PostController {
             likes.delete(existing.get());
             liked = false;
         } else {
-            likes.save(new PostLike(id, sidHash));
+            try {
+                likes.save(new PostLike(id, sidHash));
+            } catch (DataIntegrityViolationException dup) {
+                // 동시 더블탭 — 같은 세션의 하트가 이미 들어갔다. 중복은 무시하고 정상 처리.
+            }
             liked = true;
         }
         return ResponseEntity.ok(Map.of("liked", liked, "hearts", likes.countByPostId(id)));
@@ -184,7 +194,7 @@ public class PostController {
     @PostMapping("/{id}/comments")
     public ResponseEntity<?> createComment(@PathVariable Long id,
                                            @Valid @RequestBody CommentRequest req) {
-        if (!posts.existsById(id)) return ResponseEntity.notFound().build();
+        if (!posts.existsByIdAndDeletedFalse(id)) return ResponseEntity.notFound().build();
         Optional<String> blocked = moderation.check(req.nickname(), req.body());
         if (blocked.isPresent()) {
             return ResponseEntity.badRequest().body(Map.of("error", blocked.get()));

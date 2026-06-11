@@ -34,8 +34,13 @@ export default function CctvPlayer({ src, title }: { src: string; title: string 
         // enableWorker:false — 운영 CSP(script-src 'self')가 blob 워커를 막아도 안전
         const instance = new Hls({ enableWorker: false, maxBufferLength: 15, liveSyncDurationCount: 3 });
         instance.on(Hls.Events.MANIFEST_PARSED, tryPlay);
+        // 복구 무한루프 방지 — 계속 깨지는 스트림은 몇 번 시도 후 포기(CPU/네트워크 churn 차단)
+        let recoverCount = 0;
+        const MAX_RECOVER = 3;
         instance.on(Hls.Events.ERROR, (_evt, data) => {
           if (!data.fatal) return;
+          if (recoverCount >= MAX_RECOVER) { instance.destroy(); return; }
+          recoverCount++;
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) instance.startLoad();
           else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) instance.recoverMediaError();
           else instance.destroy();

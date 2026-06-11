@@ -93,7 +93,14 @@ export default function AnthemPage() {
 
   const clearTimers = () => { timers.current.forEach(clearTimeout); timers.current = []; };
   const stopLoop = () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = 0; };
-  useEffect(() => () => { clearTimers(); stopLoop(); }, []);
+  useEffect(() => () => {
+    clearTimers();
+    stopLoop();
+    // AudioContext는 브라우저당 동시 개수 한도(~6)가 있어 탭을 떠날 때 반드시 닫는다.
+    // 안 닫으면 재방문마다 누수돼 결국 "maximum contexts" 예외가 난다.
+    acRef.current?.close().catch(() => {});
+    acRef.current = null;
+  }, []);
 
   const ac = () => {
     if (!acRef.current) {

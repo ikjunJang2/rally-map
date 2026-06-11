@@ -3,6 +3,11 @@ import type { PoisResult } from '../types';
 
 const BASE = '/api';
 
+/** 관리자 토큰 저장 키 — AuthContext와 공유 (401 만료 처리에서 직접 비워야 함) */
+export const TOKEN_STORAGE_KEY = 'rally-admin-token';
+/** 토큰이 만료/무효(401)임을 AuthContext에 알리는 이벤트 — 받으면 로그아웃 상태로 전환 */
+export const AUTH_EXPIRED_EVENT = 'rally-auth-expired';
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -34,6 +39,13 @@ export async function api<T>(path: string, { method = 'GET', body, token }: ApiO
   });
 
   if (!res.ok) {
+    // 토큰을 보내고도 401이면 만료/무효 — 저장 토큰을 비우고 AuthContext에 알려
+    // 로그인 상태가 고착되거나 죽은 토큰으로 무한 재요청하는 것을 막는다.
+    // (로그인 요청 자체는 token 없이 호출되므로 여기에 걸리지 않음)
+    if (res.status === 401 && token) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+    }
     let message = `요청 실패 (${res.status})`;
     try {
       const data = (await res.json()) as { error?: string; message?: string };

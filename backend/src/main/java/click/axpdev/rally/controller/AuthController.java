@@ -30,8 +30,9 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@Valid @RequestBody LoginRequest req) {
-        // 무차별 대입 방어 — 계정 기준 전역 제한
-        if (!rateLimit.allowLogin()) {
+        // 무차별 대입 방어 — 계정(username)별 제한 (전역 단일 카운터는 관리자 로그인 자체를
+        // 막는 DoS가 되므로 계정별로 분리, 별도 전역 backstop은 RateLimitService가 처리)
+        if (!rateLimit.allowLogin(req.username())) {
             log.warn("로그인 시도 제한 초과 (계정: {})", req.username());
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", "로그인 시도가 너무 많아요. 잠시 후 다시 시도해주세요."));

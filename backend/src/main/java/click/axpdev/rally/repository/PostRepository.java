@@ -14,6 +14,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> findByCategoryAndDeletedFalseOrderByCreatedAtDesc(Post.Category category, Pageable pageable);
     Page<Post> findByDeletedFalseOrderByCreatedAtDesc(Pageable pageable);
     boolean existsByTitleAndDeletedFalseAndCreatedAtAfter(String title, Instant after);
+    // 좋아요·댓글은 살아있는(삭제 안 된) 글에만 — existsById는 소프트삭제 글도 true라 부적합
+    boolean existsByIdAndDeletedFalse(Long id);
 
     /** 하트 1개 이상인 살아있는 글을 하트순 → 최신순으로 */
     @Query("""
