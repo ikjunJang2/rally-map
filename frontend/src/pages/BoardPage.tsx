@@ -33,6 +33,8 @@ export default function BoardPage() {
   const [speaking, setSpeaking] = useState(false);
   const [rot, setRot] = useState<'none' | 'left' | 'right'>('left'); // 전체화면 회전 방향
   const [isFs, setIsFs] = useState(false);
+  const [overlay, setOverlay] = useState(false); // Fullscreen API 미지원(iOS Safari) 시 CSS 오버레이 폴백
+  const [speed, setSpeed] = useState(1); // 구호 읽는 속도 배율
 
   const previewRef = useRef<HTMLDivElement>(null);
   const repeatRef = useRef(repeat);
@@ -100,7 +102,8 @@ export default function BoardPage() {
     const voice = pickVoice();
     const make = (s: string) => {
       const u = new SpeechSynthesisUtterance(s);
-      u.lang = 'ko-KR'; u.pitch = preset.pitch; u.rate = chant ? Math.max(0.6, preset.rate * 0.88) : preset.rate;
+      const base = chant ? preset.rate * 0.9 : preset.rate;
+      u.lang = 'ko-KR'; u.pitch = preset.pitch; u.rate = Math.min(2, Math.max(0.5, base * speed));
       if (voice) u.voice = voice;
       return u;
     };
@@ -138,10 +141,14 @@ export default function BoardPage() {
   const toggleFullscreen = () => {
     const el = previewRef.current;
     if (!el) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.().catch(() => {});
+    if (document.fullscreenElement) { document.exitFullscreen?.().catch(() => {}); return; }
+    if (overlay) { setOverlay(false); return; } // 오버레이 모드면 닫기
+    const req = el.requestFullscreen?.();
+    if (req && typeof req.then === 'function') {
+      req.then(lockLandscape).catch(() => setOverlay(true)); // 실패 시 CSS 오버레이로
     } else {
-      Promise.resolve(el.requestFullscreen?.()).then(lockLandscape).catch(() => {});
+      // requestFullscreen 미지원(iOS Safari의 div 등) → CSS 고정 오버레이로 대체
+      setOverlay(true);
     }
   };
 
@@ -159,10 +166,11 @@ export default function BoardPage() {
     <section aria-label="전광판과 소리내기">
       <h2 className="tab-title"><Megaphone size={20} className="ic accent" aria-hidden="true" />전광판 · 소리내기</h2>
 
-      <div className={`board-preview eff-${effect} rot-${rot}`} ref={previewRef} style={{ background: bg }} onClick={toggleFullscreen}>
+      <div className={`board-preview eff-${effect} rot-${rot}${overlay ? ' board-overlay' : ''}`}
+           ref={previewRef} style={{ background: bg }} onClick={toggleFullscreen}>
         <div className="board-stage">
           <span className="board-text" style={{ color }}>{shownText}</span>
-          {isFs && <span className="board-exit-hint">화면을 누르면 닫혀요</span>}
+          {(isFs || overlay) && <span className="board-exit-hint">화면을 누르면 닫혀요</span>}
         </div>
       </div>
       <p className="meta" style={{ textAlign: 'center', margin: '4px 0 10px' }}>
@@ -221,7 +229,12 @@ export default function BoardPage() {
         <label className="check" style={{ marginTop: 10 }}>
           <input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} /> 반복해서 외치기
         </label>
-        <div className="form-row" style={{ marginTop: 8 }}>
+        <span className="field-label" style={{ marginTop: 10 }}>
+          구호 속도 — {speed < 0.85 ? '느리게' : speed > 1.25 ? '빠르게' : '보통'} ({speed.toFixed(1)}×)
+        </span>
+        <input className="speed-range" type="range" min={0.6} max={1.8} step={0.1} value={speed}
+               onChange={(e) => setSpeed(Number(e.target.value))} aria-label="구호 읽는 속도" />
+        <div className="form-row" style={{ marginTop: 10 }}>
           <button type="button" className="primary" disabled={!ttsOk || !text.trim()} onClick={speak}>
             <Volume2 size={16} aria-hidden="true" /> {speaking ? '다시' : '외쳐주기'}
           </button>

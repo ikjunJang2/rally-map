@@ -300,17 +300,19 @@ main { padding: 16px 14px; }
 @keyframes boardBlink { 50% { opacity: 0; } }
 .eff-pulse .board-text { animation: boardPulse .9s ease-in-out infinite; }
 @keyframes boardPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+/* 실제 Fullscreen API */
 .board-preview:fullscreen { height: 100vh; width: 100vw; border-radius: 0; border: 0; }
 .board-preview:fullscreen .board-text { font-size: clamp(3rem, 13vmin, 12rem); }
-/* 전체화면 + 세로 화면에서만 무대를 가로로 회전 — 폰을 든 채 돌려 보여주기 위함.
-   (가로 기기나 OS 방향잠금이 먹은 경우엔 이미 가로라 이 미디어쿼리가 적용되지 않는다) */
+/* iOS Safari 등 div Fullscreen 미지원 시 CSS 고정 오버레이로 대체 (별도 규칙 — :fullscreen 미지원 브라우저에서도 살아남게) */
+.board-preview.board-overlay { position: fixed; inset: 0; height: 100vh; width: 100vw; border-radius: 0; border: 0; z-index: 2000; }
+.board-preview.board-overlay .board-text { font-size: clamp(3rem, 13vmin, 12rem); }
+/* 세로 화면일 때만 무대를 가로로 회전 — 폰을 든 채 돌려 보여주기 위함 (전체화면/오버레이 공통).
+   가로 기기나 OS 방향잠금이 먹은 경우엔 이미 가로라 이 미디어쿼리가 적용되지 않는다. */
 @media (orientation: portrait) {
-  .board-preview.rot-left:fullscreen .board-stage,
-  .board-preview.rot-right:fullscreen .board-stage {
-    position: absolute; top: 50%; left: 50%; width: 100vh; height: 100vw;
-  }
-  .board-preview.rot-left:fullscreen .board-stage { transform: translate(-50%, -50%) rotate(-90deg); }
-  .board-preview.rot-right:fullscreen .board-stage { transform: translate(-50%, -50%) rotate(90deg); }
+  .board-preview.rot-left:fullscreen .board-stage { position: absolute; top: 50%; left: 50%; width: 100vh; height: 100vw; transform: translate(-50%, -50%) rotate(-90deg); }
+  .board-preview.rot-right:fullscreen .board-stage { position: absolute; top: 50%; left: 50%; width: 100vh; height: 100vw; transform: translate(-50%, -50%) rotate(90deg); }
+  .board-preview.rot-left.board-overlay .board-stage { position: absolute; top: 50%; left: 50%; width: 100vh; height: 100vw; transform: translate(-50%, -50%) rotate(-90deg); }
+  .board-preview.rot-right.board-overlay .board-stage { position: absolute; top: 50%; left: 50%; width: 100vh; height: 100vw; transform: translate(-50%, -50%) rotate(90deg); }
 }
 .board-exit-hint { position: absolute; bottom: 6%; left: 50%; transform: translateX(-50%);
   font-size: .95rem; font-weight: 600; color: rgba(255, 255, 255, .6);
@@ -319,10 +321,9 @@ main { padding: 16px 14px; }
 .swatches { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 8px; }
 .swatch { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; padding: 0; }
 .swatch.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
-@media (prefers-reduced-motion: reduce) {
-  .eff-scroll .board-text, .eff-blink .board-text, .eff-pulse .board-text { animation: none; }
-  .eff-scroll .board-text { position: static; left: auto; transform: none; }
-}
+.speed-range { width: 100%; margin: 4px 0 2px; accent-color: var(--accent); }
+/* 전광판 효과(흐르기·깜빡임·커지기)는 사용자가 직접 고른 표시 기능이므로
+   prefers-reduced-motion에서도 끄지 않는다 (끄면 전광판의 존재 의의가 사라짐). */
 
 /* 법령 검색 결과 — 클릭 시 앱 안에서 조문 펼쳐보기 */
 .law-result { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0;
