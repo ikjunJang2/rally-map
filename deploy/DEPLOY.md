@@ -48,7 +48,7 @@
 ssh -i rally-map.pem ubuntu@<EC2-퍼블릭-IP>
 
 # 저장소 클론
-git clone https://git.axpdev.click/axp-team/rally-map.git
+git clone https://github.com/ikjunJang2/rally-map.git
 cd rally-map
 
 # 배포 스크립트 실행 — Docker 설치 + .env 생성 + 기동
