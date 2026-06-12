@@ -38,13 +38,89 @@ const MELODY: { s: string; n: NoteName; d?: number }[] = [
   { s: '보', n: 'C5' }, { s: '전', n: 'D5' }, { s: '하', n: 'D5' }, { s: '세', n: 'E5' }, { s: '~', n: 'C5', d: 3 },
 ];
 
-interface Instr { label: string; w1: OscillatorType; w2: OscillatorType; ratio2: number; g2: number; atk: number; dec: number; sus: number; vib?: number; plucky?: boolean; }
+interface Instr {
+  label: string;
+  pluck?: boolean;           // 가야금: Karplus-Strong 발현 모델
+  partials?: number[];       // 배음 진폭 (index 1 = 기음) — 커스텀 파형용
+  atk: number; dec: number; sus: number;
+  filtFrom?: number; filtTo?: number; // 로우패스 스윕 (밝다 → 부드럽게)
+  detune?: number;           // 센트 단위 2보이스 디튠 (두께감)
+  vib?: number;              // 비브라토 Hz
+  damp?: number; fb?: number; // pluck: 감쇠 필터/피드백
+}
 const INSTRUMENTS: Record<string, Instr> = {
-  piano: { label: '피아노', w1: 'triangle', w2: 'sine', ratio2: 2, g2: 0.09, atk: 0.008, dec: 0.34, sus: 0.24 },
-  gayageum: { label: '가야금', w1: 'triangle', w2: 'triangle', ratio2: 3, g2: 0.16, atk: 0.004, dec: 1.1, sus: 0, plucky: true },
-  sax: { label: '색소폰', w1: 'sawtooth', w2: 'sine', ratio2: 2, g2: 0.12, atk: 0.05, dec: 0.18, sus: 0.3, vib: 5 },
-  marimba: { label: '실로폰', w1: 'sine', w2: 'sine', ratio2: 4, g2: 0.5, atk: 0.002, dec: 0.45, sus: 0, plucky: true },
+  piano:    { label: '피아노', partials: [0, 1, .55, .4, .26, .16, .1, .07, .05, .034, .022, .014], atk: .006, dec: 1.8, sus: 0, filtFrom: 6500, filtTo: 1050, detune: 4 },
+  gayageum: { label: '가야금', pluck: true, atk: .002, dec: 1.6, sus: 0, damp: 3.4, fb: .993 },
+  sax:      { label: '색소폰', partials: [0, 1, .7, .5, .4, .3, .22, .16, .12, .09, .06], atk: .05, dec: .2, sus: .32, filtFrom: 2800, filtTo: 1500, vib: 5 },
+  marimba:  { label: '실로폰', partials: [0, 1, 0, 0, .55, 0, 0, .18], atk: .002, dec: .5, sus: 0, filtFrom: 7000, filtTo: 2400 },
 };
+
+type Voice = { release: (t: number) => void };
+
+function makeWave(c: AudioContext, partials: number[]): PeriodicWave {
+  const real = new Float32Array(partials.length);
+  const imag = Float32Array.from(partials);
+  return c.createPeriodicWave(real, imag, { disableNormalization: false });
+}
+
+/** 배음 파형 + 시간에 따라 닫히는 로우패스 + 디튠 보이스 (피아노·색소폰·실로폰) */
+function voiceWave(c: AudioContext, f: number, I: Instr, t: number, out: AudioNode): Voice {
+  const wave = makeWave(c, I.partials ?? [0, 1]);
+  const end = t + I.atk + I.dec;
+  const filt = c.createBiquadFilter(); filt.type = 'lowpass'; filt.Q.value = 0.7;
+  filt.frequency.setValueAtTime(I.filtFrom ?? 5000, t);
+  filt.frequency.exponentialRampToValueAtTime(Math.max(I.filtTo ?? 1200, 200), end);
+  const amp = c.createGain();
+  amp.gain.setValueAtTime(0.0001, t);
+  amp.gain.exponentialRampToValueAtTime(0.5, t + I.atk);
+  amp.gain.exponentialRampToValueAtTime(Math.max(I.sus, 0.0006), end);
+  filt.connect(amp); amp.connect(out);
+  const oscs: OscillatorNode[] = [];
+  for (const d of I.detune ? [-I.detune, I.detune] : [0]) {
+    const o = c.createOscillator(); o.setPeriodicWave(wave); o.frequency.value = f; o.detune.value = d;
+    o.connect(filt); o.start(t); oscs.push(o);
+  }
+  if (I.vib) {
+    const lfo = c.createOscillator(); lfo.frequency.value = I.vib;
+    const lg = c.createGain(); lg.gain.value = f * 0.007;
+    lfo.connect(lg); for (const o of oscs) lg.connect(o.frequency); lfo.start(t); oscs.push(lfo);
+  }
+  if (I.sus <= 0.01) for (const o of oscs) { try { o.stop(end + 0.15); } catch { /* noop */ } }
+  return {
+    release(rt) {
+      try {
+        amp.gain.cancelScheduledValues(rt);
+        amp.gain.setValueAtTime(Math.max(amp.gain.value, 0.0001), rt);
+        amp.gain.exponentialRampToValueAtTime(0.0001, rt + 0.16);
+      } catch { /* noop */ }
+      for (const o of oscs) { try { o.stop(rt + 0.2); } catch { /* noop */ } }
+    },
+  };
+}
+
+/** Karplus-Strong 발현 현(撥絃) 모델 — 가야금 같은 뜯는 줄 소리 */
+function voicePluck(c: AudioContext, f: number, I: Instr, t: number, out: AudioNode): Voice {
+  const burst = 0.025;
+  const buf = c.createBuffer(1, Math.max(1, Math.ceil(c.sampleRate * burst)), c.sampleRate);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length);
+  const src = c.createBufferSource(); src.buffer = buf;
+  const exciteLP = c.createBiquadFilter(); exciteLP.type = 'lowpass'; exciteLP.frequency.value = Math.min(f * 7, 9000);
+  const delay = c.createDelay(1); delay.delayTime.value = 1 / f;
+  const damp = c.createBiquadFilter(); damp.type = 'lowpass'; damp.frequency.value = Math.min(f * (I.damp ?? 3), 10000);
+  const fb = c.createGain(); fb.gain.value = I.fb ?? 0.99;
+  const amp = c.createGain(); amp.gain.value = 0.7;
+  src.connect(exciteLP); exciteLP.connect(delay);
+  delay.connect(damp); damp.connect(fb); fb.connect(delay); // 피드백 루프 = 줄
+  delay.connect(amp); amp.connect(out);
+  src.start(t); src.stop(t + burst);
+  try { fb.gain.setTargetAtTime(0, t + I.dec * 1.6, 0.2); } catch { /* noop */ } // 자연 감쇠 후 루프 정리
+  return {
+    release(rt) {
+      try { fb.gain.setTargetAtTime(0, rt, 0.05); amp.gain.setTargetAtTime(0.0001, rt, 0.06); } catch { /* noop */ }
+    },
+  };
+}
 const INSTR_KEYS = Object.keys(INSTRUMENTS);
 
 const BEAT_MS = 560;
@@ -69,7 +145,8 @@ export default function AnthemPage() {
   const [banner, setBanner] = useState('');
 
   const acRef = useRef<AudioContext | null>(null);
-  const active = useRef<Map<number, { osc: OscillatorNode[]; gains: GainNode[] }>>(new Map());
+  const active = useRef<Map<number, Voice>>(new Map());
+  const masterRef = useRef<AudioNode | null>(null);
   const instrRef = useRef(instr);
   const startRef = useRef(0);
   const scoreRef = useRef(0);
@@ -106,40 +183,37 @@ export default function AnthemPage() {
     if (!acRef.current) {
       const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       acRef.current = new Ctx();
+      masterRef.current = null; // 새 컨텍스트 → 마스터 체인 재생성
     }
     if (acRef.current.state === 'suspended') void acRef.current.resume();
     return acRef.current;
+  };
+
+  /** 모든 음이 거치는 마스터 — 컴프레서로 뭉개짐·클리핑 방지(고급스러운 일관된 음량) */
+  const master = (c: AudioContext): AudioNode => {
+    if (!masterRef.current) {
+      const comp = c.createDynamicsCompressor();
+      comp.threshold.value = -16; comp.knee.value = 22; comp.ratio.value = 3.2;
+      comp.attack.value = 0.003; comp.release.value = 0.25;
+      const g = c.createGain(); g.gain.value = 0.85;
+      comp.connect(g); g.connect(c.destination);
+      masterRef.current = comp;
+    }
+    return masterRef.current;
   };
 
   const noteOn = (keyIdx: number) => {
     const c = ac(); const t = c.currentTime; const f = NOTES[KEYS[keyIdx]];
     const I = INSTRUMENTS[instrRef.current];
     noteOff(keyIdx);
-    const o1 = c.createOscillator(); o1.type = I.w1; o1.frequency.value = f;
-    const o2 = c.createOscillator(); o2.type = I.w2; o2.frequency.value = f * I.ratio2;
-    const g1 = c.createGain(); const g2 = c.createGain();
-    const end = t + I.atk + I.dec;
-    g1.gain.setValueAtTime(0.0001, t); g1.gain.exponentialRampToValueAtTime(0.42, t + I.atk);
-    g1.gain.exponentialRampToValueAtTime(I.plucky ? 0.0008 : Math.max(I.sus, 0.0008), end);
-    g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(I.g2, t + I.atk);
-    g2.gain.exponentialRampToValueAtTime(I.plucky ? 0.0004 : Math.max(I.sus * 0.3, 0.0004), end);
-    o1.connect(g1).connect(c.destination); o2.connect(g2).connect(c.destination);
-    const osc: OscillatorNode[] = [o1, o2];
-    if (I.vib) {
-      const lfo = c.createOscillator(); lfo.frequency.value = I.vib;
-      const lg = c.createGain(); lg.gain.value = f * 0.012;
-      lfo.connect(lg); lg.connect(o1.frequency); lg.connect(o2.frequency); lfo.start(t); osc.push(lfo);
-    }
-    o1.start(t); o2.start(t);
-    if (I.plucky) osc.forEach((o) => { try { o.stop(end + 0.12); } catch { /* noop */ } });
-    active.current.set(keyIdx, { osc, gains: [g1, g2] });
+    const out = master(c);
+    const v = I.pluck ? voicePluck(c, f, I, t, out) : voiceWave(c, f, I, t, out);
+    active.current.set(keyIdx, v);
   };
   const noteOff = (keyIdx: number) => {
     const a = active.current.get(keyIdx); if (!a) return;
     active.current.delete(keyIdx);
-    const c = ac(); const t = c.currentTime;
-    a.gains.forEach((g) => { try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); } catch { /* noop */ } });
-    a.osc.forEach((o) => { try { o.stop(t + 0.26); } catch { /* noop */ } });
+    a.release(ac().currentTime);
   };
 
   const addFlowers = (n: number, centerLeft?: number) => {
