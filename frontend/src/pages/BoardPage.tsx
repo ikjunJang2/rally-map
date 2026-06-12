@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Megaphone, Volume2, Square, Maximize } from 'lucide-react';
 
 const COLORS = ['#ff3b30', '#ffd60a', '#34c759', '#0a84ff', '#ffffff', '#ff2d92', '#ff9f0a', '#00e5ff'];
@@ -24,6 +24,7 @@ export default function BoardPage() {
   const [color, setColor] = useState(COLORS[0]);
   const [bg, setBg] = useState(BGS[0]);
   const [effect, setEffect] = useState('static'); // 기본은 또렷이 보이는 고정 (흐르기는 선택)
+  const [flowDur, setFlowDur] = useState(12);      // 흐르기 1회 시간(초) — 클수록 느림
   const [spaceOut, setSpaceOut] = useState(false); // 전광판 글자 띄우기(구호 느낌) — 시각 전용
   const [chant, setChant] = useState(true); // TTS: 한 글자씩 또박또박 외치기 — 기본 켜짐
   const [gender, setGender] = useState<'male' | 'female'>('male');
@@ -169,7 +170,8 @@ export default function BoardPage() {
       <h2 className="tab-title"><Megaphone size={20} className="ic accent" aria-hidden="true" />전광판 · 소리내기</h2>
 
       <div className={`board-preview eff-${effect} rot-${rot}${overlay ? ' board-overlay' : ''}`}
-           ref={previewRef} style={{ background: bg }} onClick={toggleFullscreen}>
+           ref={previewRef} style={{ background: bg, '--flow-dur': `${flowDur}s` } as CSSProperties}
+           onClick={toggleFullscreen}>
         <div className="board-stage">
           <span className="board-text" style={{ color }}>{shownText}</span>
           {(isFs || overlay) && <span className="board-exit-hint">화면을 누르면 닫혀요</span>}
@@ -191,6 +193,15 @@ export default function BoardPage() {
         <span className="field-label">효과</span>
         <div className="seg">{EFFECTS.map((e) => (
           <button key={e.id} type="button" className={effect === e.id ? 'on' : ''} onClick={() => setEffect(e.id)}>{e.label}</button>))}</div>
+        {effect === 'scroll' && (
+          <>
+            <span className="field-label" style={{ marginTop: 8 }}>흐름 속도 — {flowDur >= 16 ? '느리게' : flowDur <= 7 ? '빠르게' : '보통'} ({flowDur}초/회)</span>
+            {/* 오른쪽일수록 빠르게(초 감소) — value를 뒤집어 직관적으로 */}
+            <input className="speed-range" type="range" min={4} max={24} step={1}
+                   value={28 - flowDur} onChange={(e) => setFlowDur(28 - Number(e.target.value))}
+                   aria-label="전광판 흐름 속도" />
+          </>
+        )}
         <label className="check" style={{ marginTop: 8 }}>
           <input type="checkbox" checked={spaceOut} onChange={(e) => setSpaceOut(e.target.checked)} /> 글자 띄우기 (부·정·선·거)
         </label>
