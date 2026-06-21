@@ -6,10 +6,17 @@ import click.axpdev.rally.domain.ShareItem;
 import click.axpdev.rally.repository.NoticeRepository;
 import click.axpdev.rally.repository.PoiRepository;
 import click.axpdev.rally.repository.ShareItemRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 
 import static click.axpdev.rally.domain.PoiType.*;
@@ -21,9 +28,13 @@ import static click.axpdev.rally.domain.PoiType.*;
 @Configuration
 public class DataSeeder {
 
+    private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
+
     @Bean
-    CommandLineRunner seed(PoiRepository pois, NoticeRepository notices, ShareItemRepository shareItems) {
+    CommandLineRunner seed(PoiRepository pois, NoticeRepository notices,
+                           ShareItemRepository shareItems, DataSource dataSource) {
         return args -> {
+            dropStalePoiTypeCheck(dataSource);
             if (pois.count() == 0) {
                 pois.saveAll(List.of(
                     new Poi(MEET,   "모임 장소 (SK올림픽핸드볼경기장 앞)", 37.51735, 127.12640, "주최 측 공지에 따라 변경될 수 있음 · 동2문 인근"),
@@ -68,5 +79,35 @@ public class DataSeeder {
                 ));
             }
         };
+    }
+
+    /**
+     * POI.type enum 컬럼은 테이블 생성 시점의 값들로 CHECK 제약이 박힌다. 이후 enum에 SHELTER 등을
+     * 추가해도 ddl-auto=update가 기존 CHECK를 갱신하지 않아 새 값 삽입이 거부된다(H2).
+     * 그 옛 CHECK(절(clause)에 'MEET'가 들어간 type enum 체크)를 1회 제거한다. 멱등.
+     */
+    private void dropStalePoiTypeCheck(DataSource ds) {
+        try (Connection c = ds.getConnection()) {
+            List<String> drop = new ArrayList<>();
+            try (Statement q = c.createStatement();
+                 ResultSet rs = q.executeQuery(
+                     "SELECT tc.CONSTRAINT_NAME, cc.CHECK_CLAUSE " +
+                     "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc " +
+                     "JOIN INFORMATION_SCHEMA.CHECK_CONSTRAINTS cc ON tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME " +
+                     "WHERE tc.TABLE_NAME = 'POI' AND tc.CONSTRAINT_TYPE = 'CHECK'")) {
+                while (rs.next()) {
+                    String clause = rs.getString(2);
+                    if (clause != null && clause.contains("MEET")) drop.add(rs.getString(1));
+                }
+            }
+            for (String name : drop) {
+                try (Statement s = c.createStatement()) {
+                    s.execute("ALTER TABLE POI DROP CONSTRAINT \"" + name + "\"");
+                    log.info("옛 POI.type CHECK 제약 제거: {}", name);
+                } catch (Exception ignore) { /* 이미 없으면 무시 */ }
+            }
+        } catch (Exception e) {
+            log.warn("POI.type CHECK 제약 정리 실패(무시하고 진행): {}", e.getMessage());
+        }
     }
 }
