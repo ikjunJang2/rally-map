@@ -30,16 +30,19 @@ public class AdminSettingController {
     private final String envLawOc;
     private final String envYoutubeKey;
     private final String envItsKey;
+    private final String envSeoulKey;
     private final RestClient http;
 
     public AdminSettingController(SettingService settings,
                                   @Value("${rally.law.oc}") String envLawOc,
                                   @Value("${rally.youtube.api-key}") String envYoutubeKey,
-                                  @Value("${rally.its.api-key}") String envItsKey) {
+                                  @Value("${rally.its.api-key}") String envItsKey,
+                                  @Value("${rally.seoul.api-key}") String envSeoulKey) {
         this.settings = settings;
         this.envLawOc = envLawOc;
         this.envYoutubeKey = envYoutubeKey;
         this.envItsKey = envItsKey;
+        this.envSeoulKey = envSeoulKey;
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(8000);
@@ -57,6 +60,9 @@ public class AdminSettingController {
                     true),
             new Field("its.api-key", "ITS 교통정보 오픈API 키 (CCTV)",
                     "its.go.kr 오픈데이터에서 발급. 경기장 주변 교통 CCTV 조회에 쓰여요.",
+                    true),
+            new Field("seoul.api-key", "서울 실시간 도시데이터 키 (혼잡도)",
+                    "data.seoul.go.kr(열린데이터광장)에서 발급. 올림픽공원 실시간 혼잡도·인구·예측을 지도에 표시해요.",
                     true)
     );
 
@@ -102,6 +108,7 @@ public class AdminSettingController {
             case "law.oc" -> testLaw();
             case "youtube.api-key" -> testYoutube();
             case "its.api-key" -> testIts();
+            case "seoul.api-key" -> testSeoul();
             default -> new Res(false, "허용되지 않은 설정 키예요");
         };
         return Map.of("ok", r.ok(), "message", r.message());
@@ -165,6 +172,25 @@ public class AdminSettingController {
             return new Res(false, "키 오류 또는 권한 문제 (" + re.getStatusCode().value() + ")");
         } catch (Exception e) {
             return new Res(false, "ITS 서버에 연결할 수 없어요 (서버 점검 또는 우리 서버 IP 차단)");
+        }
+    }
+
+    private Res testSeoul() {
+        String key = settings.get("seoul.api-key", envSeoulKey).strip();
+        if (key.isBlank()) return new Res(false, "키가 등록되지 않았어요");
+        try {
+            String url = "http://openapi.seoul.go.kr:8088/" + key + "/json/citydata_ppltn/1/1/"
+                    + java.net.URLEncoder.encode("올림픽공원", java.nio.charset.StandardCharsets.UTF_8);
+            JsonNode root = http.get().uri(java.net.URI.create(url)).retrieve().body(JsonNode.class);
+            JsonNode rows = root == null ? null : root.path("SeoulRtd.citydata_ppltn");
+            JsonNode r = (rows != null && rows.isArray() && !rows.isEmpty()) ? rows.get(0) : null;
+            if (r != null && !r.path("AREA_CONGEST_LVL").asText("").isBlank()) {
+                return new Res(true, "정상 — 올림픽공원 혼잡도: " + r.path("AREA_CONGEST_LVL").asText());
+            }
+            String msg = root == null ? "" : root.path("RESULT").path("MESSAGE").asText("");
+            return new Res(false, msg.isBlank() ? "응답은 받았으나 혼잡도 데이터가 없어요 (키 확인)" : "서울 데이터 오류 — " + msg);
+        } catch (Exception e) {
+            return new Res(false, "서울 도시데이터 연결 실패: " + brief(e));
         }
     }
 

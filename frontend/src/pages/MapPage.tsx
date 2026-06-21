@@ -4,7 +4,7 @@ import type { Map as LeafletMap, CircleMarker as LeafletCircleMarker, TileEvent 
 import 'leaflet/dist/leaflet.css';
 import { Gift } from 'lucide-react';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
-import { usePois, useShare } from '../hooks/useApi';
+import { usePois, useShare, useCongestion } from '../hooks/useApi';
 import Skeleton from '../components/Skeleton';
 import type { ItemStatus, Poi, PoiType, ShareCategory } from '../types';
 
@@ -32,6 +32,47 @@ export function timeAgo(iso: string): string {
   const m = Math.floor(s / 60); if (m < 60) return `${m}분 전`;
   const h = Math.floor(m / 60); if (h < 24) return `${h}시간 전`;
   return `${Math.floor(h / 24)}일 전`;
+}
+
+/** 혼잡도 단계 → 색·이모지 (서울 도시데이터: 여유/보통/약간 붐빔/붐빔) */
+const CONGEST: Record<string, { cls: string; emoji: string }> = {
+  '여유': { cls: 'free', emoji: '🟢' },
+  '보통': { cls: 'normal', emoji: '🔵' },
+  '약간 붐빔': { cls: 'busy', emoji: '🟠' },
+  '붐빔': { cls: 'crowd', emoji: '🔴' },
+};
+
+/** 실시간 혼잡도 배너 — 서울 공식 도시데이터(키 설정 시). 안전 정보로 지도 상단에 표시 */
+function CongestionBanner() {
+  const { data } = useCongestion();
+  if (!data?.enabled) return null;
+  if (data.error || !data.level) {
+    return <div className="congest-card"><p className="meta">실시간 혼잡도를 불러올 수 없어요.</p></div>;
+  }
+  const c = CONGEST[data.level] ?? { cls: '', emoji: 'ℹ️' };
+  const ppl = data.min != null && data.max != null
+    ? `약 ${data.min.toLocaleString('ko-KR')}~${data.max.toLocaleString('ko-KR')}명` : '';
+  const hm = (t: string | null) => (t && t.length >= 16 ? t.slice(11, 16) : (t ?? ''));
+  const fcst = (data.forecast ?? []).filter((f) => f.level).slice(0, 4);
+  return (
+    <div className={`congest-card ${c.cls}`} role="status" aria-label="실시간 혼잡도">
+      <div className="congest-head">
+        <span className="congest-lvl">{c.emoji} {data.level}</span>
+        <span className="congest-area">{data.area} 실시간 혼잡도</span>
+      </div>
+      {ppl && <p className="congest-ppl">{ppl}{data.time ? ` · ${hm(data.time)} 기준` : ''}</p>}
+      {data.message && <p className="congest-msg">{data.message}</p>}
+      {fcst.length > 0 && (
+        <div className="congest-fcst">
+          {fcst.map((f, i) => {
+            const fc = CONGEST[f.level] ?? { emoji: '·' };
+            return <span key={i} className="fcst-chip">{hm(f.time)} {fc.emoji}{f.level}</span>;
+          })}
+        </div>
+      )}
+      <p className="congest-src">출처: 서울 실시간 도시데이터(추적 없는 공식 집계)</p>
+    </div>
+  );
 }
 
 function FilterChecks({ active, onToggle }: {
@@ -142,6 +183,7 @@ export default function MapPage() {
 
   return (
     <section aria-label="현장 지도">
+      <CongestionBanner />
       <div ref={mapBoxRef} style={{ scrollMarginTop: '110px' }} role="region" aria-label="현장 지도 — 화살표 키로 이동, +/- 키로 확대·축소">
         <MapContainer ref={mapRef} center={CENTER} zoom={17} className="map" scrollWheelZoom>
           <MapResizeFix />

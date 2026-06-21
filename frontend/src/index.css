@@ -325,6 +325,27 @@ main { padding: 16px 14px; }
 /* 전광판 효과(흐르기·깜빡임·커지기)는 사용자가 직접 고른 표시 기능이므로
    prefers-reduced-motion에서도 끄지 않는다 (끄면 전광판의 존재 의의가 사라짐). */
 
+/* 실시간 혼잡도 배너 */
+.congest-card { border: 1px solid var(--border); border-left: 5px solid var(--muted);
+  border-radius: 12px; padding: 10px 14px; margin: 0 0 10px; background: var(--card); }
+.congest-card.free { border-left-color: #16a34a; }
+.congest-card.normal { border-left-color: #2563eb; }
+.congest-card.busy { border-left-color: #f59e0b; }
+.congest-card.crowd { border-left-color: #dc2626; }
+.congest-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.congest-lvl { font-size: 1.05rem; font-weight: 800; }
+.congest-card.free .congest-lvl { color: #16a34a; }
+.congest-card.normal .congest-lvl { color: #2563eb; }
+.congest-card.busy .congest-lvl { color: #d97706; }
+.congest-card.crowd .congest-lvl { color: #dc2626; }
+.congest-area { font-size: .9rem; color: var(--muted); font-weight: 600; }
+.congest-ppl { font-size: .88rem; margin: 4px 0 0; font-weight: 600; }
+.congest-msg { font-size: .82rem; color: var(--muted); margin: 3px 0 0; line-height: 1.45; }
+.congest-fcst { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0 0; }
+.fcst-chip { font-size: .76rem; font-weight: 600; background: var(--border); color: var(--text);
+  padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.congest-src { font-size: .7rem; color: var(--muted); margin: 6px 0 0; }
+
 /* 법령 검색 결과 — 클릭 시 앱 안에서 조문 펼쳐보기 */
 .law-result { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0;
   cursor: pointer; color: inherit; font: inherit; }

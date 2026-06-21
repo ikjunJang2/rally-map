@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { AdminReport, AdminShareItem, AppSetting, CctvResponse, Comment, LawDetail, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
+import type { AdminReport, AdminShareItem, AppSetting, CctvResponse, Comment, Congestion, LawDetail, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -77,6 +77,16 @@ export function useCctvs() {
     // 카메라 목록은 백엔드가 10분 캐시 — 과한 재조회 불필요
     refetchInterval: 10 * 60_000,
     staleTime: 5 * 60_000,
+  });
+}
+
+/** 실시간 혼잡도 — 서울 도시데이터 (키 미설정 시 enabled=false) */
+export function useCongestion() {
+  return useQuery<Congestion>({
+    queryKey: ['congestion'],
+    queryFn: () => api('/congestion'),
+    refetchInterval: REFRESH_MS,
+    staleTime: 30_000,
   });
 }
 

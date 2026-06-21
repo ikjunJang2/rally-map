@@ -82,6 +82,27 @@ export interface CctvResponse {
   error?: boolean;
 }
 
+export interface CongestionForecast {
+  time: string;
+  level: string;
+  min: number | null;
+  max: number | null;
+}
+
+export interface Congestion {
+  enabled: boolean;
+  area: string | null;
+  /** 여유 · 보통 · 약간 붐빔 · 붐빔 */
+  level: string | null;
+  message: string | null;
+  min: number | null;
+  max: number | null;
+  time: string | null;
+  /** 키는 있으나 서울 API 조회 실패 */
+  error: boolean;
+  forecast: CongestionForecast[];
+}
+
 export interface Law {
   name: string;
   mst: string;
