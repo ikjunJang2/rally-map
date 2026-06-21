@@ -443,32 +443,34 @@ function ShareManager() {
       {[...groups.entries()].map(([pid, list]) => (
         <div key={pid} className="card">
           <h3><Gift size={15} className="ic accent" aria-hidden="true" />{poiLabel(pid)}</h3>
-          {list.map((it) => {
-            const cat = SHARE_CATEGORY[it.category] ?? { emoji: '📦', label: '기타' };
-            return (
-              <div key={it.id} className="share-admin-item">
-                <div className="share-admin-head">
-                  <span className="share-admin-name">{cat.emoji} {it.name}</span>
-                  <input className="share-qty" defaultValue={it.quantity ?? ''} maxLength={20} placeholder="수량"
-                         onBlur={(e) => { const v = e.target.value.trim(); if (v !== (it.quantity ?? '')) patch(it.id, { quantity: v }, '수량을 바꿨어요'); }} />
-                  <span className="share-time">{timeAgo(it.updatedAt)}</span>
-                  <button className="linklike admin" onClick={() =>
-                    mutate.mutate({ path: `/admin/share/${it.id}`, method: 'DELETE' },
-                      { onSuccess: () => toast('success', '삭제했어요') })}>삭제</button>
-                </div>
-                {/* 빠른 일괄 업데이트 — 탭 한 번으로 재고 상태 변경 */}
-                <div className="share-status-btns" role="group" aria-label={`${it.name} 재고 상태`}>
-                  {(Object.entries(SHARE_STATUS) as [ItemStatus, { label: string; cls: string }][]).map(([k, v]) => (
-                    <button key={k} type="button" className={`status-btn ${v.cls} ${it.status === k ? 'on' : ''}`}
-                            aria-pressed={it.status === k}
-                            onClick={() => { if (it.status !== k) patch(it.id, { status: k }, '상태를 바꿨어요'); }}>
-                      {v.label}
-                    </button>
-                  ))}
-                </div>
+          {list.map((it) => (
+            <div key={it.id} className="share-admin-item">
+              <div className="share-admin-head">
+                <span className="share-admin-name">{it.name}</span>
+                <select className="share-cat" value={it.category}
+                        onChange={(e) => patch(it.id, { category: e.target.value }, '분류를 바꿨어요')}>
+                  {(Object.entries(SHARE_CATEGORY) as [ShareCategory, { label: string; emoji: string }][]).map(([k, v]) =>
+                    <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+                </select>
+                <input className="share-qty" defaultValue={it.quantity ?? ''} maxLength={20} placeholder="수량"
+                       onBlur={(e) => { const v = e.target.value.trim(); if (v !== (it.quantity ?? '')) patch(it.id, { quantity: v }, '수량을 바꿨어요'); }} />
+                <span className="share-time">{timeAgo(it.updatedAt)}</span>
+                <button className="linklike admin" onClick={() =>
+                  mutate.mutate({ path: `/admin/share/${it.id}`, method: 'DELETE' },
+                    { onSuccess: () => toast('success', '삭제했어요') })}>삭제</button>
               </div>
-            );
-          })}
+              {/* 빠른 일괄 업데이트 — 탭 한 번으로 재고 상태 변경 */}
+              <div className="share-status-btns" role="group" aria-label={`${it.name} 재고 상태`}>
+                {(Object.entries(SHARE_STATUS) as [ItemStatus, { label: string; cls: string }][]).map(([k, v]) => (
+                  <button key={k} type="button" className={`status-btn ${v.cls} ${it.status === k ? 'on' : ''}`}
+                          aria-pressed={it.status === k}
+                          onClick={() => { if (it.status !== k) patch(it.id, { status: k }, '상태를 바꿨어요'); }}>
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       ))}
     </div>

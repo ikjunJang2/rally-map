@@ -367,8 +367,12 @@ body.dark .share-chip.low { background: #3a2e0a; color: #fcd34d; }
 /* 나눔 관리 — 품목 행(분류·수량·갱신시각 + 빠른 상태버튼) */
 .share-admin-item { padding: 9px 0; border-bottom: 1px dashed var(--border); }
 .share-admin-item:last-child { border-bottom: none; }
-.share-admin-head { display: flex; align-items: center; gap: 8px; }
-.share-admin-head .share-admin-name { flex: 1; font-weight: 600; }
+.share-admin-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.share-admin-head .share-admin-name { flex: 1; min-width: 80px; font-weight: 600; }
+.share-cat {
+  padding: 5px 6px; border-radius: 8px; font: inherit; font-size: 0.82em;
+  border: 1.5px solid var(--border); background: var(--bg); color: var(--text);
+}
 .share-qty {
   width: 78px; padding: 5px 8px; border-radius: 8px; font: inherit; font-size: 0.84em;
   border: 1.5px solid var(--border); background: var(--bg); color: var(--text);
