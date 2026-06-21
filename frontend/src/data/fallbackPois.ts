@@ -1,4 +1,4 @@
-import { MapPin, TrainFront, Toilet, Store, Pill, Droplets, type LucideIcon } from 'lucide-react';
+import { MapPin, TrainFront, Toilet, Store, Pill, Droplets, BusFront, type LucideIcon } from 'lucide-react';
 import type { Poi, PoiType } from '../types';
 
 // 서버가 응답하지 않을 때(현장 통신 장애 등) 사용하는 내장 데이터.
@@ -30,6 +30,7 @@ export const TYPE_INFO: Record<PoiType, { label: string; color: string; Icon: Lu
   STORE:    { label: '편의점', color: '#9333ea', Icon: Store },
   PHARMACY: { label: '약국',   color: '#d97706', Icon: Pill },
   WATER:    { label: '나눔',   color: '#0891b2', Icon: Droplets },
+  SHELTER:  { label: '버스쉼터', color: '#0d9488', Icon: BusFront },
 };
 
 // SK올림픽핸드볼경기장

@@ -6,5 +6,6 @@ public enum PoiType {
     TOILET,  // 화장실
     STORE,   // 편의점
     PHARMACY,// 약국
-    WATER    // 물·물품 나눔
+    WATER,   // 물·물품 나눔
+    SHELTER  // 버스쉼터·휴식 공간
 }

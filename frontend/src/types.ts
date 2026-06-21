@@ -1,6 +1,6 @@
 /** 도메인 타입 — 백엔드 엔티티와 1:1 대응 */
 
-export type PoiType = 'MEET' | 'SUBWAY' | 'TOILET' | 'STORE' | 'PHARMACY' | 'WATER';
+export type PoiType = 'MEET' | 'SUBWAY' | 'TOILET' | 'STORE' | 'PHARMACY' | 'WATER' | 'SHELTER';
 
 export interface Poi {
   id: number;
