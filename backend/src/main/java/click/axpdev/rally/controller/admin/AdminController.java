@@ -86,22 +86,30 @@ public class AdminController {
         return shareItems.findAllByOrderByPoiIdAscIdAsc();
     }
 
-    public record ShareItemRequest(@NotNull Long poiId, @NotBlank @Size(max = 40) String name) {}
+    public record ShareItemRequest(@NotNull Long poiId, @NotBlank @Size(max = 40) String name,
+                                   ShareItem.Category category, @Size(max = 20) String quantity) {}
 
     @PostMapping("/share")
     public ResponseEntity<ShareItem> createShareItem(@Valid @RequestBody ShareItemRequest req) {
         if (!pois.existsById(req.poiId())) return ResponseEntity.badRequest().build();
+        String qty = req.quantity() == null || req.quantity().isBlank() ? null : req.quantity().strip();
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(shareItems.save(new ShareItem(req.poiId(), req.name().strip())));
+                .body(shareItems.save(new ShareItem(req.poiId(), req.name().strip(), req.category(), qty)));
     }
 
-    public record StatusRequest(@NotNull ShareItem.Status status) {}
+    /** 상태·수량·분류 부분 갱신 — 보낸 필드만 반영(현장 빠른 업데이트) */
+    public record ShareUpdateRequest(ShareItem.Status status, ShareItem.Category category, String quantity) {}
 
     @PatchMapping("/share/{id}")
-    public ResponseEntity<ShareItem> updateShareStatus(@PathVariable Long id,
-                                                       @Valid @RequestBody StatusRequest req) {
+    public ResponseEntity<ShareItem> updateShareItem(@PathVariable Long id,
+                                                     @Valid @RequestBody ShareUpdateRequest req) {
         return shareItems.findById(id)
-                .map(s -> { s.setStatus(req.status()); return ResponseEntity.ok(shareItems.save(s)); })
+                .map(s -> {
+                    if (req.status() != null) s.setStatus(req.status());
+                    if (req.category() != null) s.setCategory(req.category());
+                    if (req.quantity() != null) s.setQuantity(req.quantity().isBlank() ? null : req.quantity().strip());
+                    return ResponseEntity.ok(shareItems.save(s));
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 

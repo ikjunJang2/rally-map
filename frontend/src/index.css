@@ -361,6 +361,30 @@ body.dark .share-chip.low { background: #3a2e0a; color: #fcd34d; }
   padding: 8px 10px; border-radius: 10px;
   border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font: inherit; font-size: 0.88em;
 }
+/* 공개 — 나눔 신선도 */
+.share-fresh { display: inline-block; font-size: 0.76em; color: var(--muted); margin: 4px 0 2px; }
+
+/* 나눔 관리 — 품목 행(분류·수량·갱신시각 + 빠른 상태버튼) */
+.share-admin-item { padding: 9px 0; border-bottom: 1px dashed var(--border); }
+.share-admin-item:last-child { border-bottom: none; }
+.share-admin-head { display: flex; align-items: center; gap: 8px; }
+.share-admin-head .share-admin-name { flex: 1; font-weight: 600; }
+.share-qty {
+  width: 78px; padding: 5px 8px; border-radius: 8px; font: inherit; font-size: 0.84em;
+  border: 1.5px solid var(--border); background: var(--bg); color: var(--text);
+}
+.share-time { font-size: 0.74em; color: var(--muted); white-space: nowrap; }
+.share-status-btns { display: flex; gap: 6px; margin-top: 7px; }
+.status-btn {
+  flex: 1; padding: 7px 4px; border-radius: 9px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--bg); color: var(--muted);
+  font: inherit; font-size: 0.82em; font-weight: 700;
+}
+.status-btn.on.plenty { background: #dcfce7; color: #166534; border-color: #86efac; }
+.status-btn.on.low { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.status-btn.on.out { background: var(--border); color: var(--text); border-color: var(--muted); }
+body.dark .status-btn.on.plenty { background: #14331f; color: #86efac; border-color: #166534; }
+body.dark .status-btn.on.low { background: #3a2e0a; color: #fcd34d; border-color: #92400e; }
 
 /* ── 지도 시설 필터 (체크박스) ── */
 .filter-checks {

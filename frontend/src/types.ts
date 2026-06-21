@@ -36,11 +36,14 @@ export interface Stream {
 }
 
 export type ItemStatus = 'PLENTY' | 'LOW' | 'OUT';
+export type ShareCategory = 'WATER' | 'FOOD' | 'WARM' | 'MEDICAL' | 'RAIN' | 'ETC';
 
 export interface ShareItemView {
   id: number;
   name: string;
   status: ItemStatus;
+  category: ShareCategory;
+  quantity: string | null;
   updatedAt: string;
 }
 
@@ -59,6 +62,8 @@ export interface AdminShareItem {
   poiId: number;
   name: string;
   status: ItemStatus;
+  category: ShareCategory;
+  quantity: string | null;
   updatedAt: string;
 }
 

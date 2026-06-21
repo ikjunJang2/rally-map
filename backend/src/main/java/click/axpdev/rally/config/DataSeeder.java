@@ -51,9 +51,9 @@ public class DataSeeder {
                     .filter(p -> p.getType() == WATER)
                     .findFirst()
                     .ifPresent(water -> shareItems.saveAll(List.of(
-                        new ShareItem(water.getId(), "생수"),
-                        new ShareItem(water.getId(), "핫팩"),
-                        new ShareItem(water.getId(), "우비")
+                        new ShareItem(water.getId(), "생수", ShareItem.Category.WATER, null),
+                        new ShareItem(water.getId(), "핫팩", ShareItem.Category.WARM, null),
+                        new ShareItem(water.getId(), "우비", ShareItem.Category.RAIN, null)
                     )));
             }
             if (notices.count() == 0) {

@@ -25,7 +25,8 @@ public class ShareController {
         this.pois = pois;
     }
 
-    public record ItemView(Long id, String name, ShareItem.Status status, Instant updatedAt) {}
+    public record ItemView(Long id, String name, ShareItem.Status status,
+                           ShareItem.Category category, String quantity, Instant updatedAt) {}
     public record ShareLocation(Long poiId, String name, double lat, double lng,
                                 PoiType type, List<ItemView> items) {}
 
@@ -35,7 +36,8 @@ public class ShareController {
         Map<Long, List<ItemView>> byPoi = new LinkedHashMap<>();
         for (ShareItem it : items.findAllByOrderByPoiIdAscIdAsc()) {
             byPoi.computeIfAbsent(it.getPoiId(), k -> new ArrayList<>())
-                 .add(new ItemView(it.getId(), it.getName(), it.getStatus(), it.getUpdatedAt()));
+                 .add(new ItemView(it.getId(), it.getName(), it.getStatus(),
+                         it.getCategory(), it.getQuantity(), it.getUpdatedAt()));
         }
         // 활성 POI 정보와 결합 (삭제·숨김 POI는 제외)
         List<ShareLocation> result = new ArrayList<>();

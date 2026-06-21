@@ -6,7 +6,7 @@ import { Gift } from 'lucide-react';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
 import { usePois, useShare } from '../hooks/useApi';
 import Skeleton from '../components/Skeleton';
-import type { ItemStatus, Poi, PoiType } from '../types';
+import type { ItemStatus, Poi, PoiType, ShareCategory } from '../types';
 
 /** 나눔 품목 재고 상태 표시 (관리자·시민 공용) */
 export const SHARE_STATUS: Record<ItemStatus, { label: string; cls: string }> = {
@@ -14,6 +14,25 @@ export const SHARE_STATUS: Record<ItemStatus, { label: string; cls: string }> = 
   LOW: { label: '얼마 남음', cls: 'low' },
   OUT: { label: '소진', cls: 'out' },
 };
+
+/** 나눔 품목 분류 (관리자·시민 공용) */
+export const SHARE_CATEGORY: Record<ShareCategory, { label: string; emoji: string }> = {
+  WATER:   { label: '물',   emoji: '💧' },
+  FOOD:    { label: '식품', emoji: '🍪' },
+  WARM:    { label: '방한', emoji: '🧤' },
+  MEDICAL: { label: '의료', emoji: '🩹' },
+  RAIN:    { label: '우비', emoji: '☂️' },
+  ETC:     { label: '기타', emoji: '📦' },
+};
+
+/** ISO 시각 → "방금 / N분 전 / N시간 전 / N일 전" (나눔 신선도) */
+export function timeAgo(iso: string): string {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return '방금';
+  const m = Math.floor(s / 60); if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}시간 전`;
+  return `${Math.floor(h / 24)}일 전`;
+}
 
 function FilterChecks({ active, onToggle }: {
   active: Set<PoiType>;
@@ -178,16 +197,20 @@ export default function MapPage() {
                     onClick={() => focusPoi({ id: loc.poiId, lat: loc.lat, lng: loc.lng })}>
               <h3>{loc.name}</h3>
               <div className="share-items">
-                {loc.items.map((it) => {
-                  // 서버가 예상 밖 상태를 주더라도 크래시하지 않게 폴백 (TYPE_INFO와 동일 패턴)
+                {[...loc.items].sort((a, b) => a.category.localeCompare(b.category)).map((it) => {
+                  // 서버가 예상 밖 값이어도 크래시하지 않게 폴백
                   const st = SHARE_STATUS[it.status] ?? { label: it.status, cls: '' };
+                  const cat = SHARE_CATEGORY[it.category] ?? { emoji: '📦' };
                   return (
                     <span key={it.id} className={`share-chip ${st.cls}`}>
-                      {it.name} · {st.label}
+                      <span aria-hidden="true">{cat.emoji} </span>{it.name}{it.quantity ? ` ${it.quantity}` : ''} · {st.label}
                     </span>
                   );
                 })}
               </div>
+              {loc.items.length > 0 && (
+                <span className="share-fresh">갱신 {timeAgo(loc.items.reduce((m, i) => (i.updatedAt > m ? i.updatedAt : m), loc.items[0].updatedAt))}</span>
+              )}
               <span className="navlink">지도에서 위치 보기 ↑</span>
             </button>
           ))}

@@ -7,10 +7,10 @@ import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leafl
 import 'leaflet/dist/leaflet.css';
 import { useAdminPois, useAdminDeletedPosts, useAdminReports, useAdminShare, useAdminSettings, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
 import { REPORT_REASONS } from './CommunityPage';
-import { SHARE_STATUS } from './MapPage';
+import { SHARE_STATUS, SHARE_CATEGORY, timeAgo } from './MapPage';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
 import Skeleton from '../components/Skeleton';
-import type { ItemStatus, Poi, PoiType } from '../types';
+import type { ItemStatus, Poi, PoiType, ShareCategory } from '../types';
 
 /** 지도 클릭 → 좌표 콜백. CircleMarker로 선택 위치 표시 (아이콘 에셋 불필요) */
 function LocationPicker({ lat, lng, onPick }: {
@@ -382,6 +382,8 @@ function ShareManager() {
   const mutate = useAdminMutation(['share', 'admin-share']);
   const [poiId, setPoiId] = useState<number | ''>('');
   const [name, setName] = useState('');
+  const [category, setCategory] = useState<ShareCategory>('WATER');
+  const [quantity, setQuantity] = useState('');
 
   if (isLoading) return <Skeleton lines={3} />;
 
@@ -400,9 +402,11 @@ function ShareManager() {
     e.preventDefault();
     if (poiId === '' || !name.trim()) return;
     mutate.mutate(
-      { path: '/admin/share', method: 'POST', body: { poiId, name: name.trim() } },
-      { onSuccess: () => { setName(''); toast('success', '품목을 추가했어요'); } });
+      { path: '/admin/share', method: 'POST', body: { poiId, name: name.trim(), category, quantity: quantity.trim() } },
+      { onSuccess: () => { setName(''); setQuantity(''); toast('success', '품목을 추가했어요'); } });
   };
+  const patch = (id: number, body: Record<string, unknown>, msg: string) =>
+    mutate.mutate({ path: `/admin/share/${id}`, method: 'PATCH', body }, { onSuccess: () => toast('success', msg) });
 
   return (
     <div>
@@ -416,9 +420,16 @@ function ShareManager() {
             ))}
           </select>
         </label>
+        <label className="field-label">
+          분류
+          <select value={category} onChange={(e) => setCategory(e.target.value as ShareCategory)}>
+            {(Object.entries(SHARE_CATEGORY) as [ShareCategory, { label: string; emoji: string }][]).map(([k, v]) =>
+              <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+          </select>
+        </label>
         <div className="form-row">
-          <input maxLength={40} placeholder="품목명 (예: 생수, 핫팩)" value={name}
-                 onChange={(e) => setName(e.target.value)} />
+          <input maxLength={40} placeholder="품목명 (예: 생수, 핫팩)" value={name} onChange={(e) => setName(e.target.value)} />
+          <input maxLength={20} placeholder="수량(선택)" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ maxWidth: 120 }} />
           <button type="submit" className="primary" disabled={poiId === '' || !name.trim()}>추가</button>
         </div>
         <p className="notice" style={{ margin: '4px 0 0' }}>
@@ -432,21 +443,32 @@ function ShareManager() {
       {[...groups.entries()].map(([pid, list]) => (
         <div key={pid} className="card">
           <h3><Gift size={15} className="ic accent" aria-hidden="true" />{poiLabel(pid)}</h3>
-          {list.map((it) => (
-            <div key={it.id} className="share-admin-row">
-              <span className="share-admin-name">{it.name}</span>
-              <select value={it.status} onChange={(e) =>
-                mutate.mutate(
-                  { path: `/admin/share/${it.id}`, method: 'PATCH', body: { status: e.target.value } },
-                  { onSuccess: () => toast('success', '상태를 바꿨어요') })}>
-                {(Object.entries(SHARE_STATUS) as [ItemStatus, { label: string }][]).map(([k, v]) =>
-                  <option key={k} value={k}>{v.label}</option>)}
-              </select>
-              <button className="linklike admin" onClick={() =>
-                mutate.mutate({ path: `/admin/share/${it.id}`, method: 'DELETE' },
-                  { onSuccess: () => toast('success', '삭제했어요') })}>삭제</button>
-            </div>
-          ))}
+          {list.map((it) => {
+            const cat = SHARE_CATEGORY[it.category] ?? { emoji: '📦', label: '기타' };
+            return (
+              <div key={it.id} className="share-admin-item">
+                <div className="share-admin-head">
+                  <span className="share-admin-name">{cat.emoji} {it.name}</span>
+                  <input className="share-qty" defaultValue={it.quantity ?? ''} maxLength={20} placeholder="수량"
+                         onBlur={(e) => { const v = e.target.value.trim(); if (v !== (it.quantity ?? '')) patch(it.id, { quantity: v }, '수량을 바꿨어요'); }} />
+                  <span className="share-time">{timeAgo(it.updatedAt)}</span>
+                  <button className="linklike admin" onClick={() =>
+                    mutate.mutate({ path: `/admin/share/${it.id}`, method: 'DELETE' },
+                      { onSuccess: () => toast('success', '삭제했어요') })}>삭제</button>
+                </div>
+                {/* 빠른 일괄 업데이트 — 탭 한 번으로 재고 상태 변경 */}
+                <div className="share-status-btns" role="group" aria-label={`${it.name} 재고 상태`}>
+                  {(Object.entries(SHARE_STATUS) as [ItemStatus, { label: string; cls: string }][]).map(([k, v]) => (
+                    <button key={k} type="button" className={`status-btn ${v.cls} ${it.status === k ? 'on' : ''}`}
+                            aria-pressed={it.status === k}
+                            onClick={() => { if (it.status !== k) patch(it.id, { status: k }, '상태를 바꿨어요'); }}>
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
