@@ -14,9 +14,7 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.List;
 
 import static click.axpdev.rally.domain.PoiType.*;
@@ -34,7 +32,7 @@ public class DataSeeder {
     CommandLineRunner seed(PoiRepository pois, NoticeRepository notices,
                            ShareItemRepository shareItems, DataSource dataSource) {
         return args -> {
-            dropStalePoiTypeCheck(dataSource);
+            relaxPoiTypeColumn(dataSource);
             if (pois.count() == 0) {
                 pois.saveAll(List.of(
                     new Poi(MEET,   "모임 장소 (SK올림픽핸드볼경기장 앞)", 37.51735, 127.12640, "주최 측 공지에 따라 변경될 수 있음 · 동2문 인근"),
@@ -87,27 +85,17 @@ public class DataSeeder {
     }
 
     /**
-     * POI.type enum 컬럼은 테이블 생성 시점의 값들로 CHECK 제약이 박힌다. 이후 enum에 SHELTER 등을
-     * 추가해도 ddl-auto=update가 기존 CHECK를 갱신하지 않아 새 값 삽입이 거부된다(H2).
-     * 그 옛 CHECK(절(clause)에 'MEET'가 들어간 type enum 체크)를 1회 제거한다. 멱등.
+     * Hibernate 7 + H2는 @Enumerated(STRING) 컬럼을 H2 네이티브 ENUM 타입으로 만든다. 이후 enum에
+     * SHELTER 등을 추가해도 ddl-auto=update가 컬럼 타입을 갱신하지 않아 "Value not permitted for column"
+     * 으로 새 값 삽입이 거부된다. POI.type 컬럼을 VARCHAR로 완화하면 enum 이름(문자열)이 그대로 저장돼
+     * 무손실이고 새 값도 허용된다. 매 기동마다 멱등하게 실행(이미 VARCHAR면 무해).
      */
-    private void dropStalePoiTypeCheck(DataSource ds) {
-        try (Connection c = ds.getConnection()) {
-            // POI.type enum CHECK는 절(clause)에 'MEET'를 포함한다(다른 enum 체크와 구분). 이름만 찾아 POI에서 제거.
-            List<String> names = new ArrayList<>();
-            try (Statement q = c.createStatement();
-                 ResultSet rs = q.executeQuery(
-                     "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.CHECK_CONSTRAINTS WHERE CHECK_CLAUSE LIKE '%MEET%'")) {
-                while (rs.next()) names.add(rs.getString(1));
-            }
-            for (String name : names) {
-                try (Statement s = c.createStatement()) {
-                    s.execute("ALTER TABLE POI DROP CONSTRAINT IF EXISTS \"" + name + "\"");
-                    log.info("옛 POI.type CHECK 제약 제거: {}", name);
-                } catch (Exception ignore) { /* POI 소속 아니거나 이미 없으면 무시 */ }
-            }
+    private void relaxPoiTypeColumn(DataSource ds) {
+        try (Connection c = ds.getConnection(); Statement s = c.createStatement()) {
+            s.execute("ALTER TABLE POI ALTER COLUMN \"TYPE\" SET DATA TYPE VARCHAR(255)");
+            log.info("POI.type 컬럼을 VARCHAR로 완화 (enum 신규값 허용)");
         } catch (Exception e) {
-            log.warn("POI.type CHECK 제약 정리 실패(무시하고 진행): {}", e.getMessage());
+            log.warn("POI.type 컬럼 완화 실패(무시하고 진행): {}", e.getMessage());
         }
     }
 }
