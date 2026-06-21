@@ -36,12 +36,14 @@ public class YouTubeService {
     private final SettingService settings;
     private final List<String> queries;
     private final List<String> excludedChannels;
+    private final List<String> excludedKeywords;
     private boolean warnedDisabled = false;
 
     public YouTubeService(StreamRepository streams,
                           @Value("${rally.youtube.api-key}") String apiKey,
                           @Value("${rally.youtube.queries}") String queries,
                           @Value("${rally.youtube.excluded-channels:}") String excludedChannels,
+                          @Value("${rally.youtube.excluded-keywords:}") String excludedKeywords,
                           SettingService settings) {
         this.streams = streams;
         this.envApiKey = apiKey.strip();
@@ -51,6 +53,11 @@ public class YouTubeService {
         this.excludedChannels = Arrays.stream(excludedChannels.split(","))
                 .map(String::strip).filter(c -> !c.isEmpty())
                 .map(String::toUpperCase).toList();
+        // 제목·채널에 이 단어가 들어가면 제외 — 런닝맨 다시보기·웹캠·게임 등 집회와 무관한
+        // 인기 라이브가 느슨한 검색에 섞여드는 노이즈 차단. 코드 기본값 + 환경변수 병합.
+        List<String> kws = new ArrayList<>(List.of("런닝맨", "몰아보기", "다시보기", "무한도전", "Live Cam"));
+        Arrays.stream(excludedKeywords.split(",")).map(String::strip).filter(s -> !s.isEmpty()).forEach(kws::add);
+        this.excludedKeywords = kws.stream().map(String::toUpperCase).distinct().toList();
     }
 
     /** 채널 차단 목록 — 채널명 부분일치(대소문자 무시) */
@@ -58,6 +65,12 @@ public class YouTubeService {
         if (channel == null) return false;
         String upper = channel.toUpperCase();
         return excludedChannels.stream().anyMatch(upper::contains);
+    }
+
+    /** 제목·채널에 제외 키워드가 있으면 노이즈(집회 무관 인기 라이브)로 간주 */
+    private boolean isNoise(String title, String channel) {
+        String hay = ((title == null ? "" : title) + " " + (channel == null ? "" : channel)).toUpperCase();
+        return excludedKeywords.stream().anyMatch(hay::contains);
     }
 
     /** 관리자 콘솔 등록 키 우선, 없으면 환경변수 기본값 */
@@ -83,12 +96,12 @@ public class YouTubeService {
         if (skipIfDisabled()) return;
         String apiKey = apiKey();
 
-        // 차단 목록이 바뀌었을 수 있으니 기존 수집분도 매 주기 정리
-        if (!excludedChannels.isEmpty()) {
+        // 차단 목록(채널·키워드)이 바뀌었을 수 있으니 기존 수집분도 매 주기 정리
+        if (!excludedChannels.isEmpty() || !excludedKeywords.isEmpty()) {
             for (Stream s : streams.findBySource(Stream.Source.YOUTUBE)) {
-                if (isExcluded(s.getChannel())) {
+                if (isExcluded(s.getChannel()) || isNoise(s.getTitle(), s.getChannel())) {
                     streams.delete(s);
-                    log.info("차단 채널 수집분 제거: {} ({})", s.getTitle(), s.getChannel());
+                    log.info("차단 수집분 제거: {} ({})", s.getTitle(), s.getChannel());
                 }
             }
         }
@@ -109,7 +122,7 @@ public class YouTubeService {
                     String title = HtmlUtils.htmlUnescape(sn.path("title").asText("(제목 없음)"));
                     String rawChannel = sn.path("channelTitle").asText(null);
                     String channel = rawChannel == null ? null : HtmlUtils.htmlUnescape(rawChannel);
-                    if (isExcluded(channel)) continue;
+                    if (isExcluded(channel) || isNoise(title, channel)) continue;
                     String thumb = sn.path("thumbnails").path("medium").path("url").asText(null);
                     String channelId = sn.path("channelId").asText(null);
                     streams.findByVideoId(videoId).ifPresentOrElse(
