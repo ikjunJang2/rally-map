@@ -21,6 +21,7 @@ export const FALLBACK_POIS: Poi[] = [
   { id: 15, type: 'STORE',   name: 'GS25 송파누리점', lat: 37.51276, lng: 127.12375, memo: '생수·간식', active: true },
   { id: 16, type: 'STORE',   name: '세븐일레븐 뉴송파방이점', lat: 37.51342, lng: 127.11819, memo: '생수·간식', active: true },
   { id: 17, type: 'WATER',   name: '물·물품 나눔처', lat: 37.51800, lng: 127.12620, memo: '현장 공지로 위치 갱신', active: true },
+  { id: 18, type: 'SHELTER', name: '버스쉼터', lat: 37.516872, lng: 127.126890, memo: '경기장 인근 휴식 공간', active: true },
 ];
 
 export const TYPE_INFO: Record<PoiType, { label: string; color: string; Icon: LucideIcon }> = {

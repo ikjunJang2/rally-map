@@ -45,6 +45,10 @@ public class DataSeeder {
                     new Poi(WATER,  "물·물품 나눔처", 37.51800, 127.12620, "현장 공지로 위치 갱신")
                 ));
             }
+            // 버스쉼터 — 신규 유형. 기존 DB에도 1회 추가되도록 독립 멱등 블록 (이후 관리자에서 추가·수정)
+            if (pois.findAll().stream().noneMatch(p -> p.getType() == SHELTER)) {
+                pois.save(new Poi(SHELTER, "버스쉼터", 37.516872, 127.126890, "경기장 인근 휴식 공간"));
+            }
             // 나눔 품목 — POI 시드와 독립 (기존 DB에 배포해도 1회 등록되도록)
             if (shareItems.count() == 0) {
                 pois.findByActiveTrue().stream()
