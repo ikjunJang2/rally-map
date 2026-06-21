@@ -4,7 +4,7 @@ import type { Map as LeafletMap, CircleMarker as LeafletCircleMarker, TileEvent 
 import 'leaflet/dist/leaflet.css';
 import { Gift } from 'lucide-react';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
-import { usePois, useShare, useCongestion } from '../hooks/useApi';
+import { usePois, useShare, useCongestion, useStreams } from '../hooks/useApi';
 import Skeleton from '../components/Skeleton';
 import type { ItemStatus, Poi, PoiType, ShareCategory } from '../types';
 
@@ -42,17 +42,13 @@ const CONGEST: Record<string, { cls: string; emoji: string }> = {
   '붐빔': { cls: 'crowd', emoji: '🔴' },
 };
 
-/** 실시간 혼잡도 배너 — 서울 공식 도시데이터(키 설정 시). 안전 정보로 지도 상단에 표시 */
-function CongestionBanner() {
-  const { data } = useCongestion();
-  if (!data?.enabled) return null;
-  if (data.error || !data.level) {
-    return <div className="congest-card"><p className="meta">실시간 혼잡도를 불러올 수 없어요.</p></div>;
-  }
-  const c = CONGEST[data.level] ?? { cls: '', emoji: 'ℹ️' };
+const hm = (t: string | null) => (t && t.length >= 16 ? t.slice(11, 16) : (t ?? ''));
+
+/** 서울 공식 혼잡도(키 있을 때) */
+function OfficialCongestion({ data }: { data: NonNullable<ReturnType<typeof useCongestion>['data']> }) {
+  const c = CONGEST[data.level!] ?? { cls: '', emoji: 'ℹ️' };
   const ppl = data.min != null && data.max != null
     ? `약 ${data.min.toLocaleString('ko-KR')}~${data.max.toLocaleString('ko-KR')}명` : '';
-  const hm = (t: string | null) => (t && t.length >= 16 ? t.slice(11, 16) : (t ?? ''));
   const fcst = (data.forecast ?? []).filter((f) => f.level).slice(0, 4);
   return (
     <div className={`congest-card ${c.cls}`} role="status" aria-label="실시간 혼잡도">
@@ -73,6 +69,41 @@ function CongestionBanner() {
       <p className="congest-src">출처: 서울 실시간 도시데이터(추적 없는 공식 집계)</p>
     </div>
   );
+}
+
+/** 폴백: 수집 중인 유튜브 라이브 시청자로 "현장 라이브 열기" 자동 추정 (키 불필요·실측 밀집도 아님) */
+function LiveHeat() {
+  const { data: streams = [] } = useStreams();
+  const live = streams.filter((s) => s.live);
+  if (live.length === 0) return null;
+  const viewers = live.reduce((sum, s) => sum + (s.viewers ?? 0), 0);
+  const heat = viewers >= 80000 ? { lvl: '매우 뜨거움', cls: 'crowd', emoji: '🔥' }
+    : viewers >= 20000 ? { lvl: '뜨거움', cls: 'busy', emoji: '🔥' }
+    : viewers >= 3000 ? { lvl: '활발', cls: 'normal', emoji: '🟠' }
+    : { lvl: '잔잔', cls: 'free', emoji: '🟢' };
+  return (
+    <div className={`congest-card ${viewers > 0 ? heat.cls : ''}`} role="status" aria-label="현장 라이브 열기">
+      <div className="congest-head">
+        <span className="congest-lvl">{viewers > 0 ? `${heat.emoji} ${heat.lvl}` : '🔴 LIVE'}</span>
+        <span className="congest-area">현장 라이브 열기</span>
+      </div>
+      <p className="congest-ppl">
+        지금 라이브 {live.length}개
+        {viewers > 0 && ` · 총 ${viewers.toLocaleString('ko-KR')}명 시청 중`}
+      </p>
+      <p className="congest-src">
+        ※ 유튜브 라이브 시청자 기준 추정(온라인 관심·규모) — 실측 현장 밀집도는 아니에요.
+        정확한 혼잡도는 서울 도시데이터 키 등록 시 표시됩니다.
+      </p>
+    </div>
+  );
+}
+
+/** 실시간 혼잡도 배너 — 서울 공식 데이터(키 있을 때) → 없으면 유튜브 라이브 열기로 자동 폴백 */
+function CongestionBanner() {
+  const { data } = useCongestion();
+  if (data?.enabled && !data.error && data.level) return <OfficialCongestion data={data} />;
+  return <LiveHeat />;
 }
 
 function FilterChecks({ active, onToggle }: {
