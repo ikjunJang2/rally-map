@@ -56,9 +56,14 @@ public class DataSeeder {
                     new Poi(WATER,  "물·물품 나눔처", 37.51800, 127.12620, "현장 공지로 위치 갱신")
                 ));
             }
-            // 버스쉼터 — 신규 유형. 기존 DB에도 1회 추가되도록 독립 멱등 블록 (이후 관리자에서 추가·수정)
+            // 버스쉼터 — 신규 유형. 기존 DB에도 1회 추가되도록 독립 멱등 블록 (이후 관리자에서 추가·수정).
+            // CHECK 제약이 남아 있으면 save가 실패할 수 있으니 try/catch — 기동 자체는 절대 죽이지 않는다.
             if (pois.findAll().stream().noneMatch(p -> p.getType() == SHELTER)) {
-                pois.save(new Poi(SHELTER, "버스쉼터", 37.516872, 127.126890, "경기장 인근 휴식 공간"));
+                try {
+                    pois.save(new Poi(SHELTER, "버스쉼터", 37.516872, 127.126890, "경기장 인근 휴식 공간"));
+                } catch (Exception e) {
+                    log.warn("버스쉼터 시드 실패(무시하고 진행): {}", e.getMessage());
+                }
             }
             // 나눔 품목 — POI 시드와 독립 (기존 DB에 배포해도 1회 등록되도록)
             if (shareItems.count() == 0) {
@@ -88,23 +93,18 @@ public class DataSeeder {
      */
     private void dropStalePoiTypeCheck(DataSource ds) {
         try (Connection c = ds.getConnection()) {
-            List<String> drop = new ArrayList<>();
+            // POI.type enum CHECK는 절(clause)에 'MEET'를 포함한다(다른 enum 체크와 구분). 이름만 찾아 POI에서 제거.
+            List<String> names = new ArrayList<>();
             try (Statement q = c.createStatement();
                  ResultSet rs = q.executeQuery(
-                     "SELECT tc.CONSTRAINT_NAME, cc.CHECK_CLAUSE " +
-                     "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc " +
-                     "JOIN INFORMATION_SCHEMA.CHECK_CONSTRAINTS cc ON tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME " +
-                     "WHERE tc.TABLE_NAME = 'POI' AND tc.CONSTRAINT_TYPE = 'CHECK'")) {
-                while (rs.next()) {
-                    String clause = rs.getString(2);
-                    if (clause != null && clause.contains("MEET")) drop.add(rs.getString(1));
-                }
+                     "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.CHECK_CONSTRAINTS WHERE CHECK_CLAUSE LIKE '%MEET%'")) {
+                while (rs.next()) names.add(rs.getString(1));
             }
-            for (String name : drop) {
+            for (String name : names) {
                 try (Statement s = c.createStatement()) {
-                    s.execute("ALTER TABLE POI DROP CONSTRAINT \"" + name + "\"");
+                    s.execute("ALTER TABLE POI DROP CONSTRAINT IF EXISTS \"" + name + "\"");
                     log.info("옛 POI.type CHECK 제약 제거: {}", name);
-                } catch (Exception ignore) { /* 이미 없으면 무시 */ }
+                } catch (Exception ignore) { /* POI 소속 아니거나 이미 없으면 무시 */ }
             }
         } catch (Exception e) {
             log.warn("POI.type CHECK 제약 정리 실패(무시하고 진행): {}", e.getMessage());
