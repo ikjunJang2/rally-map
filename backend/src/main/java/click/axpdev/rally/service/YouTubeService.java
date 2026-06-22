@@ -50,9 +50,11 @@ public class YouTubeService {
         this.settings = settings;
         this.queries = Arrays.stream(queries.split(","))
                 .map(String::strip).filter(q -> !q.isEmpty()).toList();
-        this.excludedChannels = Arrays.stream(excludedChannels.split(","))
-                .map(String::strip).filter(c -> !c.isEmpty())
-                .map(String::toUpperCase).toList();
+        // 채널 차단 — 코드 기본(한글 채널: .properties는 Latin-1라 직접 한글 불가) + 환경변수(MBC,YTN,JTBC 등) 병합.
+        // 연합뉴스TV "24시간 현장" 등 집회와 무관한 일반 뉴스 24시간 라이브가 검색에 섞이는 것 차단.
+        List<String> chs = new ArrayList<>(List.of("연합뉴스"));
+        Arrays.stream(excludedChannels.split(",")).map(String::strip).filter(c -> !c.isEmpty()).forEach(chs::add);
+        this.excludedChannels = chs.stream().map(String::toUpperCase).distinct().toList();
         // 제목·채널에 이 단어가 들어가면 제외 — 런닝맨 다시보기·웹캠·게임 등 집회와 무관한
         // 인기 라이브가 느슨한 검색에 섞여드는 노이즈 차단. 코드 기본값 + 환경변수 병합.
         List<String> kws = new ArrayList<>(List.of("런닝맨", "몰아보기", "다시보기", "무한도전", "Live Cam"));
