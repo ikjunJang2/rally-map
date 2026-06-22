@@ -19,12 +19,16 @@ const VOICE_PRESETS: Record<string, { pitch: number; rate: number }> = {
   'male-senior': { pitch: 0.55, rate: 0.85 }, 'female-senior': { pitch: 1.08, rate: 0.85 },
 };
 
+// 음성 이름으로 성별 추정 (기기마다 음성 이름이 제각각이라 키워드 매칭)
+const FEMALE_RE = /female|여성|yuna|sora|heami|nara|sun-?hi|kyuri|hyejin|여자/i;
+const MALE_RE = /male|남성|minsu|injoon|jinho|gyu|siwoo|hoon|남자/i;
+
 export default function BoardPage() {
   const [text, setText] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [bg, setBg] = useState(BGS[0]);
   const [effect, setEffect] = useState('static'); // 기본은 또렷이 보이는 고정 (흐르기는 선택)
-  const [flowDur, setFlowDur] = useState(12);      // 흐르기 1회 시간(초) — 클수록 느림
+  const [effSpeed, setEffSpeed] = useState(4);     // 효과 속도 1(느림)~10(빠름) — 흐르기·깜빡임·커지기 공통
   const [spaceOut, setSpaceOut] = useState(false); // 전광판 글자 띄우기(구호 느낌) — 시각 전용
   const [chant, setChant] = useState(true); // TTS: 한 글자씩 또박또박 외치기 — 기본 켜짐
   const [gender, setGender] = useState<'male' | 'female'>('male');
@@ -64,12 +68,15 @@ export default function BoardPage() {
   // 전광판 시각 텍스트는 TTS(chant)와 무관 — 별도 '글자 띄우기' 옵션으로만 띄운다
   const shownText = spaceOut ? [...display].filter((c) => c !== ' ').join(' ') : display;
 
+  const hasFemale = koVoices.some((v) => FEMALE_RE.test(v.name));
+  const hasMale = koVoices.some((v) => MALE_RE.test(v.name));
+  // 선택한 성별의 음성이 기기에 따로 없으면(톤으로만 흉내) 안내가 필요
+  const genderUnsupported = !voiceURI && ((gender === 'female' && !hasFemale) || (gender === 'male' && !hasMale));
+
   const pickVoice = (): SpeechSynthesisVoice | undefined => {
     if (voiceURI) { const v = voices.find((x) => x.voiceURI === voiceURI); if (v) return v; }
     if (!koVoices.length) return undefined;
-    const female = /female|여성|yuna|sora|heami|nara|sun-?hi|kyuri|hyejin|여자/i;
-    const male = /male|남성|minsu|injoon|jinho|gyu|siwoo|hoon|남자/i;
-    const want = gender === 'female' ? female : male;
+    const want = gender === 'female' ? FEMALE_RE : MALE_RE;
     return koVoices.find((v) => want.test(v.name)) ?? koVoices[0];
   };
 
@@ -170,7 +177,13 @@ export default function BoardPage() {
       <h2 className="tab-title"><Megaphone size={20} className="ic accent" aria-hidden="true" />전광판 · 소리내기</h2>
 
       <div className={`board-preview eff-${effect} rot-${rot}${overlay ? ' board-overlay' : ''}`}
-           ref={previewRef} style={{ background: bg, '--flow-dur': `${flowDur}s` } as CSSProperties}
+           ref={previewRef}
+           style={{
+             background: bg,
+             '--scroll-dur': `${(28 - effSpeed * 2.2).toFixed(1)}s`,
+             '--blink-dur': `${(1.5 - effSpeed * 0.11).toFixed(2)}s`,
+             '--pulse-dur': `${(1.7 - effSpeed * 0.12).toFixed(2)}s`,
+           } as CSSProperties}
            onClick={toggleFullscreen}>
         <div className="board-stage">
           <span className="board-text" style={{ color }}>{shownText}</span>
@@ -193,13 +206,14 @@ export default function BoardPage() {
         <span className="field-label">효과</span>
         <div className="seg">{EFFECTS.map((e) => (
           <button key={e.id} type="button" className={effect === e.id ? 'on' : ''} onClick={() => setEffect(e.id)}>{e.label}</button>))}</div>
-        {effect === 'scroll' && (
+        {effect !== 'static' && (
           <>
-            <span className="field-label" style={{ marginTop: 8 }}>흐름 속도 — {flowDur >= 16 ? '느리게' : flowDur <= 7 ? '빠르게' : '보통'} ({flowDur}초/회)</span>
-            {/* 오른쪽일수록 빠르게(초 감소) — value를 뒤집어 직관적으로 */}
-            <input className="speed-range" type="range" min={4} max={24} step={1}
-                   value={28 - flowDur} onChange={(e) => setFlowDur(28 - Number(e.target.value))}
-                   aria-label="전광판 흐름 속도" />
+            <span className="field-label" style={{ marginTop: 8 }}>
+              효과 속도 — {effSpeed <= 3 ? '느리게' : effSpeed >= 8 ? '빠르게' : '보통'} (← 느리게 · 빠르게 →)
+            </span>
+            <input className="speed-range" type="range" min={1} max={10} step={1}
+                   value={effSpeed} onChange={(e) => setEffSpeed(Number(e.target.value))}
+                   aria-label="전광판 효과 속도" />
           </>
         )}
         <label className="check" style={{ marginTop: 8 }}>
@@ -228,6 +242,14 @@ export default function BoardPage() {
         <div className="seg" style={{ marginTop: 6 }}>{AGES.map((a) => (
           <button key={a.id} type="button" className={age === a.id ? 'on' : ''} onClick={() => setAge(a.id)}>{a.label}</button>))}</div>
 
+        {genderUnsupported && (
+          <p className="form-error" style={{ margin: '6px 0 0' }}>
+            ⚠️ 이 기기엔 한국어 {gender === 'female' ? '여성' : '남성'} 음성이 따로 없어, 가진 음성을 {gender === 'female' ? '높은' : '낮은'} 톤으로 읽어요
+            (아이폰은 톤 차이가 거의 안 들려요). 또렷한 {gender === 'female' ? '여성' : '남성'} 목소리는 휴대폰 <b>설정 → 음성(TTS)</b>에서 받거나,
+            아래 <b>목소리 직접 고르기</b>에서 골라주세요.
+          </p>
+        )}
+
         {koVoices.length + otherVoices.length > 0 && (
           <>
             <span className="field-label" style={{ marginTop: 8 }}>목소리 직접 고르기 (기기에 설치된 음성)</span>
@@ -237,7 +259,8 @@ export default function BoardPage() {
               {otherVoices.length > 0 && otherVoices.map((v) => <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>)}
             </select>
             <p className="notice" style={{ margin: '4px 0 0' }}>
-              한국어 목소리 {koVoices.length}개 감지됨. 남성 목소리가 없으면 휴대폰 <b>설정 → 음성(TTS)</b>에서 한국어 남성 음성을 추가하면 여기 떠요.
+              한국어 목소리 {koVoices.length}개 감지됨{!hasMale && ' (남성 없음)'}{!hasFemale && ' (여성 없음)'}.
+              기기마다 설치된 음성이 달라요 — 휴대폰 <b>설정 → 음성(TTS)</b>에서 더 받을 수 있어요.
             </p>
           </>
         )}

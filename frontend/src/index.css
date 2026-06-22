@@ -294,11 +294,11 @@ main { padding: 16px 14px; }
   width: 100%; height: 100%; overflow: hidden; }
 .board-text { font-weight: 900; font-size: clamp(1.7rem, 11vw, 5rem); white-space: nowrap; padding: 0 10px; text-shadow: 0 0 14px currentColor; }
 .eff-static .board-text { white-space: normal; text-align: center; }
-.eff-scroll .board-text { position: absolute; left: 100%; top: 50%; animation: boardScroll var(--flow-dur, 12s) linear infinite; }
+.eff-scroll .board-text { position: absolute; left: 100%; top: 50%; animation: boardScroll var(--scroll-dur, 20s) linear infinite; }
 @keyframes boardScroll { from { transform: translate(0, -50%); } to { transform: translate(-100%, -50%); left: 0; } }
-.eff-blink .board-text { animation: boardBlink .7s steps(1, end) infinite; }
+.eff-blink .board-text { animation: boardBlink var(--blink-dur, 1s) steps(1, end) infinite; }
 @keyframes boardBlink { 50% { opacity: 0; } }
-.eff-pulse .board-text { animation: boardPulse .9s ease-in-out infinite; }
+.eff-pulse .board-text { animation: boardPulse var(--pulse-dur, 1.2s) ease-in-out infinite; }
 @keyframes boardPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
 /* 실제 Fullscreen API */
 .board-preview:fullscreen { height: 100vh; width: 100vw; border-radius: 0; border: 0; }
