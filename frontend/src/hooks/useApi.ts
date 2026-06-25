@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchPois } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import type { AdminReport, AdminShareItem, AppSetting, CctvResponse, Comment, Congestion, LawDetail, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream } from '../types';
+import type { AdminReport, AdminShareItem, AdminToonEpisode, AdminToonSeries, AppSetting, CctvResponse, Comment, Congestion, LawDetail, LawResponse, Notice, Poi, PoisResult, Post, PostCategory, ReportReason, ReportTargetType, ShareLocation, SpringPage, Stream, ToonEpisodeView, ToonSeriesCard, ToonSeriesDetail } from '../types';
 
 const REFRESH_MS = 60_000; // 현장 정보 1분 주기 갱신
 
@@ -77,6 +77,29 @@ export function useCctvs() {
     // 카메라 목록은 백엔드가 10분 캐시 — 과한 재조회 불필요
     refetchInterval: 10 * 60_000,
     staleTime: 5 * 60_000,
+  });
+}
+
+// ── 웹툰 ──
+export function useToonList() {
+  return useQuery<ToonSeriesCard[]>({ queryKey: ['toon'], queryFn: () => api('/toon/series'), staleTime: 60_000 });
+}
+export function useToonSeries(id: number) {
+  return useQuery<ToonSeriesDetail>({ queryKey: ['toon-series', id], queryFn: () => api(`/toon/series/${id}`), enabled: id > 0 });
+}
+export function useToonEpisode(id: number) {
+  return useQuery<ToonEpisodeView>({ queryKey: ['toon-episode', id], queryFn: () => api(`/toon/episode/${id}`), enabled: id > 0 });
+}
+export function useAdminToonSeries() {
+  const { token } = useAuth();
+  return useQuery<AdminToonSeries[]>({ queryKey: ['admin-toon'], queryFn: () => api('/admin/toon/series', { token }), enabled: !!token });
+}
+export function useAdminToonEpisodes(seriesId: number) {
+  const { token } = useAuth();
+  return useQuery<AdminToonEpisode[]>({
+    queryKey: ['admin-toon-eps', seriesId],
+    queryFn: () => api(`/admin/toon/series/${seriesId}/episodes`, { token }),
+    enabled: !!token && seriesId > 0,
   });
 }
 

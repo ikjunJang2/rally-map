@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift, KeyRound, UserCog } from 'lucide-react';
+import { Settings, Lock, Plus, Pin, MapIcon, Megaphone, Tv, Trash2, Flag, Gift, KeyRound, UserCog, BookImage } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { api } from '../api/client';
 import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useAdminPois, useAdminDeletedPosts, useAdminReports, useAdminShare, useAdminSettings, useNotices, useStreams, useAdminMutation } from '../hooks/useApi';
+import { useAdminPois, useAdminDeletedPosts, useAdminReports, useAdminShare, useAdminSettings, useNotices, useStreams, useAdminMutation, useAdminToonSeries, useAdminToonEpisodes } from '../hooks/useApi';
 import { REPORT_REASONS } from './CommunityPage';
 import { SHARE_STATUS, SHARE_CATEGORY, timeAgo } from './MapPage';
 import { TYPE_INFO, CENTER } from '../data/fallbackPois';
@@ -613,11 +614,145 @@ function AccountManager() {
   );
 }
 
+/** 한 작품의 회차 관리 — 회차 목록(공개 토글·삭제) + 새 회차 이미지 업로드(multipart) */
+function ToonEpisodes({ seriesId }: { seriesId: number }) {
+  const { token } = useAuth();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const mutate = useAdminMutation(['admin-toon', 'toon', 'admin-toon-eps']);
+  const { data: eps = [] } = useAdminToonEpisodes(seriesId);
+  const [epTitle, setEpTitle] = useState('');
+  const [files, setFiles] = useState<FileList | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const refreshEps = () => qc.invalidateQueries({ queryKey: ['admin-toon-eps', seriesId] });
+
+  const upload = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!files || files.length === 0) { toast('error', '이미지를 한 장 이상 골라주세요'); return; }
+    const fd = new FormData();
+    fd.append('title', epTitle.trim());
+    Array.from(files).forEach((f) => fd.append('files', f));
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/admin/toon/series/${seriesId}/episode`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error || `업로드 실패 (${res.status})`);
+      }
+      setEpTitle(''); setFiles(null);
+      if (fileRef.current) fileRef.current.value = '';
+      refreshEps();
+      qc.invalidateQueries({ queryKey: ['admin-toon'] });
+      toast('success', '회차를 올렸어요 (대기) — 검토 후 공개하세요');
+    } catch (err) {
+      toast('error', err instanceof Error ? err.message : '업로드 실패');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+      {eps.length === 0 && <p className="meta">아직 회차가 없어요. 아래에서 이미지를 올려 첫 회차를 만들어보세요.</p>}
+      {eps.map((e) => (
+        <div key={e.id} className="toon-admin-ep">
+          <span className="toon-ep-no">{e.no}화</span>
+          <span className="toon-ep-title">{e.title} <span className="meta">({e.images.length}컷)</span></span>
+          <span className={`toon-pub ${e.published ? 'on' : 'off'}`}>{e.published ? '공개' : '대기'}</span>
+          <button type="button" onClick={() => mutate.mutate(
+            { path: `/admin/toon/episode/${e.id}`, method: 'PATCH', body: { published: !e.published } },
+            { onSuccess: () => { toast('success', e.published ? '비공개로 바꿨어요' : '공개했어요'); refreshEps(); } })}>
+            {e.published ? '비공개' : '공개'}
+          </button>
+          <button type="button" className="linklike admin" onClick={() => {
+            if (confirm('이 회차와 이미지를 삭제할까요?')) mutate.mutate(
+              { path: `/admin/toon/episode/${e.id}`, method: 'DELETE' },
+              { onSuccess: () => { toast('success', '삭제했어요'); refreshEps(); } });
+          }}>삭제</button>
+        </div>
+      ))}
+      <form className="post-form" onSubmit={upload} style={{ marginTop: 10 }}>
+        <input maxLength={100} placeholder="회차 제목 (비우면 자동: N화)" value={epTitle} onChange={(e) => setEpTitle(e.target.value)} />
+        <input ref={fileRef} type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
+        <button type="submit" className="primary" disabled={uploading}>{uploading ? '올리는 중…' : '회차 업로드'}</button>
+        <p className="notice" style={{ margin: '4px 0 0' }}>이미지 여러 장을 위→아래 순서대로 선택하세요. 올리면 '대기' → 검토 후 '공개'.</p>
+      </form>
+    </div>
+  );
+}
+
+/** 웹툰 관리 (1단계: 관리자 업로드·검수) */
+function ToonManager() {
+  const toast = useToast();
+  const { data: seriesList = [], isLoading } = useAdminToonSeries();
+  const mutate = useAdminMutation(['admin-toon', 'toon']);
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [summary, setSummary] = useState('');
+  const [openId, setOpenId] = useState<number | null>(null);
+
+  const addSeries = (e: FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !author.trim()) return;
+    mutate.mutate(
+      { path: '/admin/toon/series', method: 'POST', body: { title: title.trim(), author: author.trim(), summary: summary.trim() } },
+      { onSuccess: () => { setTitle(''); setAuthor(''); setSummary(''); toast('success', '작품을 만들었어요'); } });
+  };
+
+  return (
+    <div>
+      <form className="card post-form" onSubmit={addSeries}>
+        <h3><BookImage size={16} className="ic accent" aria-hidden="true" />작품 만들기</h3>
+        <input maxLength={100} placeholder="작품 제목" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input maxLength={40} placeholder="작가명" value={author} onChange={(e) => setAuthor(e.target.value)} />
+        <textarea maxLength={500} rows={2} placeholder="작품 소개 (선택)" value={summary} onChange={(e) => setSummary(e.target.value)} />
+        <button type="submit" className="primary" disabled={!title.trim() || !author.trim() || mutate.isPending}>작품 만들기</button>
+        <p className="notice" style={{ margin: '4px 0 0' }}>작품을 만든 뒤 '회차 관리'에서 이미지를 올리고, 작품과 회차를 모두 '공개'해야 독자에게 보여요.</p>
+      </form>
+
+      {isLoading && <Skeleton lines={3} />}
+      {!isLoading && seriesList.length === 0 && <div className="card"><p className="meta">아직 작품이 없어요.</p></div>}
+      {seriesList.map((s) => (
+        <div key={s.id} className="card">
+          <div className="share-admin-head">
+            <strong>{s.title}</strong>
+            <span className={`toon-pub ${s.published ? 'on' : 'off'}`}>{s.published ? '공개' : '비공개'}</span>
+          </div>
+          <p className="meta">{s.author} · {s.episodes}화</p>
+          <div className="form-row" style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" onClick={() => mutate.mutate(
+              { path: `/admin/toon/series/${s.id}`, method: 'PATCH', body: { published: !s.published } },
+              { onSuccess: () => toast('success', s.published ? '비공개로 바꿨어요' : '공개했어요') })}>
+              {s.published ? '비공개로' : '공개하기'}
+            </button>
+            <button type="button" onClick={() => setOpenId(openId === s.id ? null : s.id)}>
+              {openId === s.id ? '회차 닫기' : '회차 관리'}
+            </button>
+            <button type="button" className="linklike admin" onClick={() => {
+              if (confirm('작품과 모든 회차·이미지를 삭제할까요?')) mutate.mutate(
+                { path: `/admin/toon/series/${s.id}`, method: 'DELETE' },
+                { onSuccess: () => toast('success', '삭제했어요') });
+            }}>삭제</button>
+          </div>
+          {openId === s.id && <ToonEpisodes seriesId={s.id} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const SECTIONS: { id: string; label: string; icon: ReactNode; el: ReactNode }[] = [
   { id: 'poi', label: '시설', icon: <MapIcon size={15} aria-hidden="true" />, el: <PoiManager /> },
   { id: 'notice', label: '공지', icon: <Megaphone size={15} aria-hidden="true" />, el: <NoticeManager /> },
   { id: 'stream', label: '라이브', icon: <Tv size={15} aria-hidden="true" />, el: <StreamManager /> },
   { id: 'share', label: '나눔', icon: <Gift size={15} aria-hidden="true" />, el: <ShareManager /> },
+  { id: 'toon', label: '웹툰', icon: <BookImage size={15} aria-hidden="true" />, el: <ToonManager /> },
   { id: 'reports', label: '신고', icon: <Flag size={15} aria-hidden="true" />, el: <ReportQueue /> },
   { id: 'deleted', label: '삭제 이력', icon: <Trash2 size={15} aria-hidden="true" />, el: <DeletedHistory /> },
   { id: 'settings', label: '연동키', icon: <KeyRound size={15} aria-hidden="true" />, el: <SettingsManager /> },

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Landmark, Moon, Sun, ALargeSmall, Settings,
   Map, Tv, MessagesSquare, Phone, BookOpen,
-  WifiOff, PlugZap, Users, Music4, Megaphone, type LucideIcon,
+  WifiOff, PlugZap, Users, Music4, Megaphone, BookImage, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -113,6 +113,9 @@ export default function Layout() {
           </Link>
           <Link to="/board" className="board-link" aria-label="전광판·소리내기" title="전광판·소리내기 📢">
             <Megaphone size={20} aria-hidden="true" />
+          </Link>
+          <Link to="/toon" className="board-link" aria-label="시민 웹툰" title="시민 웹툰 🎨">
+            <BookImage size={20} aria-hidden="true" />
           </Link>
           <button onClick={toggleBig} aria-label="글자 크기 바꾸기">
             <ALargeSmall size={20} aria-hidden="true" />

@@ -179,6 +179,14 @@ export interface Comment {
   createdAt: string;
 }
 
+// ── 웹툰 ──
+export interface ToonSeriesCard { id: number; title: string; author: string; summary: string; episodes: number; coverImageId: number | null; }
+export interface ToonEpisodeItem { id: number; no: number; title: string; }
+export interface ToonSeriesDetail { id: number; title: string; author: string; summary: string; episodes: ToonEpisodeItem[]; }
+export interface ToonEpisodeView { id: number; no: number; title: string; seriesId: number; images: number[]; }
+export interface AdminToonSeries { id: number; title: string; author: string; summary: string; published: boolean; episodes: number; }
+export interface AdminToonEpisode { id: number; no: number; title: string; published: boolean; images: number[]; }
+
 /** Spring Data Page 응답 */
 export interface SpringPage<T> {
   content: T[];
